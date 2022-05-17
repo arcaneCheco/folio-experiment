@@ -13,26 +13,32 @@ class World {
     this.width = this.container.offsetWidth;
     this.height = this.container.offsetHeight;
     this.scene = new THREE.Scene();
+    // this.scene.fog = new THREE.Fog(0xdfe9f3, 4, 16);
+    // this.scene.fog = new THREE.FogExp2(0xdfe9f3, 0.05);
     this.camera = new THREE.PerspectiveCamera(
-      75,
+      85,
       this.width / this.height,
       0.1,
       2000
     );
-    this.camera.position.set(0, 7.5, 18);
-    this.camera.lookAt(0, 0, 0);
-    this.renderer = new THREE.WebGLRenderer({ alpha: false });
+    // this.scene.position.set(0, -7.5, -18);
+    // this.camera.lookAt(0, -7.5, -18);
+    this.camera.position.set(0, 5, 23);
+    this.camera.lookAt(0, 0, -50);
+    this.renderer = new THREE.WebGLRenderer({ alpha: true });
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(0x444444);
+    // this.renderer.setClearColor(0x444444);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    // this.renderer.outputEncoding = THREE.sRGBEncoding;
-    // this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1;
     this.container.appendChild(this.renderer.domElement);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    // this.controls.enabled = false;
+    this.controls.enabled = false;
     this.debug = new Pane();
+    this.cameraTarget = new THREE.Vector2();
     this.mouse = new THREE.Vector2();
     this.textureLoader = new THREE.TextureLoader();
     this.raycaster = new THREE.Raycaster();
@@ -45,8 +51,10 @@ class World {
     });
     this.setLight();
     this.addRandomObjects();
-    this.setExpSky();
-    // this.setSky();
+    // this.setSkyBox();
+    // this.setExpSky();
+    this.setSky();
+    // this.setPointerParticles();
     this.resize();
     this.render();
     window.addEventListener("resize", this.resize.bind(this));
@@ -72,8 +80,8 @@ class World {
     // this.scene.add(helper);
     // this.scene.add(this.sun3);
 
-    this.sun4 = new THREE.SpotLight(0x0040c0, 2, 100, 3, 1, 0.8);
-    this.sun4.position.set(0, 20, -40);
+    this.sun4 = new THREE.SpotLight(0x0040c0, 5, 100, 3, 1, 0);
+    this.sun4.position.set(0, 15, -100);
     this.sun4.castShadow = true;
     console.log(this.sun4.shadow.camera);
     // this.scene.add(new THREE.CameraHelper(this.sun4.shadow.camera));
@@ -81,10 +89,10 @@ class World {
     // this.scene.add(helper4);
     this.scene.add(this.sun4);
 
-    this.ambinet = new THREE.AmbientLight(0xffffff, 0.2);
+    this.ambinet = new THREE.AmbientLight(0x222222, 0.01);
     this.scene.add(this.ambinet);
 
-    this.pointerLight = new THREE.PointLight(0xffff00, 1);
+    this.pointerLight = new THREE.PointLight(0xccff22, 1);
     this.scene.add(this.pointerLight);
   }
 
@@ -93,7 +101,7 @@ class World {
     const sphereMat = new THREE.MeshStandardMaterial();
     const sphere = new THREE.Mesh(sphereGeo, sphereMat);
     sphere.castShadow = true;
-    sphere.position.set(5, 8, -7);
+    sphere.position.set(10, 8, 9);
     this.scene.add(sphere);
     const boxGeo = new THREE.BoxGeometry(3, 3, 5);
     const boxMat = new THREE.MeshStandardMaterial();
@@ -106,13 +114,53 @@ class World {
     this.torus = new THREE.Mesh(torusGeo, torusMat);
     this.torus.position.set(5, 4, 8);
     this.torus.castShadow = true;
-    this.scene.add(this.torus);
+    // this.scene.add(this.torus);
     const icoGeo = new THREE.IcosahedronGeometry(2, 0);
     const icoMat = new THREE.MeshStandardMaterial();
     this.ico = new THREE.Mesh(icoGeo, icoMat);
     this.ico.position.set(10, 6.5, -12);
     this.ico.castShadow = true;
     this.scene.add(this.ico);
+
+    // this.plane = new THREE.Mesh(
+    //   new THREE.PlaneGeometry(250, 250),
+    //   new THREE.MeshStandardMaterial()
+    // );
+    // this.plane.rotation.x = -Math.PI / 2;
+    // this.plane.position.y += 1.5;
+    // this.scene.add(this.plane);
+
+    // const oboxGeo = new THREE.SphereGeometry(99);
+    // const oboxMat = new THREE.MeshPhongMaterial({
+    //   side: THREE.BackSide,
+    //   transparent: true,
+    //   opacity: 0.8,
+    // });
+    // this.obox = new THREE.Mesh(oboxGeo, oboxMat);
+    // // this.obox.position.set(-7, 4, 8);
+    // this.obox.castShadow = true;
+    // this.scene.add(this.obox);
+  }
+
+  setSkyBox() {
+    const textures = [
+      this.textureLoader.load("cubemap/px.jpeg"),
+      this.textureLoader.load("cubemap/nx.jpeg"),
+      this.textureLoader.load("cubemap/py.jpeg"),
+      this.textureLoader.load("cubemap/ny.jpeg"),
+      this.textureLoader.load("cubemap/pz.jpeg"),
+      this.textureLoader.load("cubemap/nz.jpeg"),
+    ];
+    const materials = [];
+    textures.forEach((tex) => {
+      materials.push(
+        new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
+      );
+    });
+    const g = new THREE.BoxGeometry(1, 1, 1);
+    const skybox = new THREE.Mesh(g, materials);
+    skybox.scale.setScalar(400);
+    this.scene.add(skybox);
   }
 
   setExpSky() {
@@ -126,6 +174,7 @@ class World {
       exposure: 0.5,
     };
     this.sky = new Sky();
+    this.sky.renderOrder = -1000;
     this.sky.scale.setScalar(100);
     const sun = new THREE.Vector3(0, 20, -40);
     const guiChanged = () => {
@@ -176,28 +225,180 @@ class World {
   }
 
   setSky() {
-    const g = new THREE.BoxGeometry(1, 1, 1);
-    // const g = new THREE.SphereGeometry(1);
+    // const g = new THREE.BoxGeometry(1, 1, 1);
+    const g = new THREE.SphereGeometry(1);
     // const g = new THREE.PlaneGeometry(1, 1);
     const m = new THREE.ShaderMaterial({
       side: THREE.BackSide,
       depthWrite: false,
-
       vertexShader: skyVertex,
       fragmentShader: skyFragment,
       uniforms: {
         uGreyNoise: { value: this.textureLoader.load("greyNoise.png") },
-        t: { value: this.time },
+        uTime: { value: this.time },
       },
+      transparent: true,
     });
     this.sky = new THREE.Mesh(g, m);
+    // this.sky.rotation.y = Math.PI / 2;
+    // this.sky.rotation.x = Math.PI / 2.5;
     this.sky.scale.setScalar(100);
     this.scene.add(this.sky);
+  }
+
+  setPointerParticles() {
+    this.ppG = new THREE.BufferGeometry();
+    this.ppCount = 50;
+    this.posArray = new Float32Array(this.ppCount * 3);
+    for (let i = 0; i < this.ppCount; i++) {
+      this.posArray[i * 3] = Math.random() - 0.5;
+      this.posArray[i * 3 + 1] = Math.random() - 0.5;
+      this.posArray[i * 3 + 2] = Math.random() - 0.5;
+    }
+    this.ppG.setAttribute(
+      "position",
+      new THREE.BufferAttribute(this.posArray, 3)
+    );
+    this.ppM = new THREE.ShaderMaterial({
+      uniforms: {
+        uPointer: { value: new THREE.Vector3() },
+      },
+      vertexShader: `
+          uniform vec3 uPointer;
+
+          void main() {
+              vec3 newPos = position * 5. + uPointer;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.);
+              gl_PointSize = 10.;
+          }
+          `,
+      fragmentShader: `
+          void main() {
+              gl_FragColor = vec4(1., 1., 0., 1.);
+          }
+          `,
+      transparent: true,
+    });
+    this.ppMesh = new THREE.Points(this.ppG, this.ppM);
+
+    this.ppScene = new THREE.Scene();
+    this.ppScene.add(this.ppMesh);
+    this.mask = { read: null, write: null };
+    this.mask.read = new THREE.WebGLRenderTarget(this.width, this.height, {
+      stencilBuffer: false,
+      depthBuffer: false,
+      type: THREE.FloatType,
+    });
+    this.mask.write = new THREE.WebGLRenderTarget(this.width, this.height, {
+      stencilBuffer: false,
+      depthBuffer: false,
+      type: THREE.FloatType,
+    });
+    // this.ppRT = new THREE.WebGLRenderTarget(this.width, this.height, {
+    //   stencilBuffer: false,
+    //   depthBuffer: false,
+    //   type: THREE.FloatType,
+    // });
+    // this.ppRTWrite = new THREE.WebGLRenderTarget(this.width, this.height, {
+    //   stencilBuffer: false,
+    //   depthBuffer: false,
+    //   type: THREE.FloatType,
+    // });
+    this.ppUniform = { value: null };
+    this.ppSwap = () => {
+      let temp = this.mask.read;
+      this.mask.read = this.mask.write;
+      this.mask.write = temp;
+      this.ppUniform.value = this.mask.read.texture;
+    };
+    this.ppSwap();
+    const ppPostGeo = new THREE.PlaneGeometry(2, 2);
+    this.ppPostM = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec2 vUv;
+
+        void main() {
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+            vUv = uv;
+        }
+        `,
+      fragmentShader: `
+        uniform sampler2D uTexture;
+        uniform vec2 uResolution;
+        uniform vec2 uPointer;
+        uniform float uSamples;
+        varying vec2 vUv;
+        void main() {
+            vec4 screen = texture2D(uTexture, vUv) * 0.98;
+            gl_FragColor = screen;
+        }
+        `,
+      uniforms: {
+        uTexture: this.ppUniform,
+        uResolution: { value: new THREE.Vector2(this.width, this.height) },
+        uSamples: { value: 1 },
+        uPointer: { value: new THREE.Vector2() },
+      },
+      //   transparent: true,
+    });
+    this.renderer.autoClear = false;
+    // this.renderer.autoClearColor = false;
+    this.ppPostMesh = new THREE.Mesh(ppPostGeo, this.ppPostM);
+    this.ppScene.add(new THREE.Mesh(ppPostGeo, this.ppPostM));
+
+    this.other = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec2 vUv;
+  
+          void main() {
+              gl_Position = vec4(position.xy, 0.0, 1.0);
+              vUv = uv;
+          }
+          `,
+        fragmentShader: `
+          uniform sampler2D uTexture;
+          uniform vec2 uPointer;
+          uniform float uSamples;
+          varying vec2 vUv;
+          void main() {
+              vec4 screen = texture2D(uTexture, vUv);
+              float a = screen.r;
+              screen.a = a;
+              gl_FragColor = screen;
+          }
+          `,
+        uniforms: {
+          uTexture: this.ppUniform,
+        },
+        transparent: true,
+      })
+    );
+    this.scene.add(this.other);
+
+    this.updatePPtrail = () => {
+      this.renderer.setRenderTarget(this.mask.write);
+      this.renderer.render(this.ppScene, this.camera);
+      this.ppSwap();
+      this.renderer.setRenderTarget(null);
+      this.renderer.clear();
+    };
+  }
+
+  parallax() {
+    // this.camera.rotation.y = -this.mouse.x * 0.2;
+    // this.camera.rotation.x = this.mouse.y * 0.4;
+    this.cameraTarget.y = -this.mouse.x * 0.2;
+    this.cameraTarget.x = this.mouse.y * 0.4;
   }
 
   onMousemove(event) {
     this.mouse.x = (2 * event.clientX) / this.width - 1;
     this.mouse.y = (-2 * event.clientY) / this.height + 1;
+    // this.ppPostMesh.material.uniforms.uPointer.value.copy(this.mouse);
+
+    this.parallax();
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersect = this.raycaster.intersectObject(this.water.t);
@@ -209,7 +410,10 @@ class World {
 
       const pos = intersect[0].point;
       this.pointerLight.position.copy(pos);
-      this.pointerLight.position.z += 0.3;
+      this.pointerLight.position.z += 0.5;
+      //   this.ppMesh.material.uniforms.uPointer.value.copy(
+      //     this.pointerLight.position
+      //   );
     }
   }
 
@@ -232,7 +436,8 @@ class World {
   render() {
     let delta = 0.01633;
     this.time += delta;
-    // this.sky && (this.sky.material.uniforms.t.value = this.time);
+    this.sky && (this.sky.material.uniforms.uTime.value = this.time);
+
     this.water.updateReflector();
     this.water.buffer.updateValues(delta);
     this.water.buffer.update();
@@ -244,6 +449,12 @@ class World {
     this.box.rotation.x += 0.01;
     this.box.rotation.y += 0.01;
     this.ico.rotation.y += 0.01;
+
+    this.camera.rotation.x +=
+      (this.cameraTarget.x - this.camera.rotation.x) * 0.1;
+    this.camera.rotation.y +=
+      (this.cameraTarget.y - this.camera.rotation.y) * 0.1;
+
     this.renderer.render(this.scene, this.camera);
 
     window.requestAnimationFrame(this.render.bind(this));

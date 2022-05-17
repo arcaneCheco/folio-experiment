@@ -17,6 +17,8 @@ export class Water {
     });
 
     const g = new THREE.PlaneGeometry(250, 250, 600, 600);
+    // const g = new THREE.CircleGeometry(100, 500, 0, Math.PI * 2);
+
     // const g = new THREE.PlaneGeometry(30, 30, 600, 600);
     // const g = new THREE.PlaneGeometry(1, 1, 600, 600);
 
@@ -50,25 +52,26 @@ export class Water {
     this.mat.uniforms["u_buffer"] = this.buffer.uniform;
 
     this.mat.onBeforeCompile = (shader) => {
-      //   console.log(shader.fragmentShader);
+      console.log(shader.fragmentShader);
       shader.fragmentShader = shader.fragmentShader.replace(
         "uniform float opacity;",
         `uniform float opacity;
-              uniform sampler2D u_buffer;
               uniform sampler2D tReflectionMap;
-              varying vec2 vUv;
               varying vec4 vCoord;`
       );
       shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <dithering_fragment>",
-        `#include <dithering_fragment>
+        "#include <encodings_fragment>",
+        `#include <encodings_fragment>
                 vec3 coord = vCoord.xyz / vCoord.w;
-                vec2 uv = coord.xy + coord.z * (vNormal.xy) * 0.05;
+                vec2 uv = coord.xy + coord.z * (vNormal.xz) * 0.02;
                 vec4 texR = texture2D(tReflectionMap, vec2( 1.0 - uv.x, uv.y ) );
-                gl_FragColor *= texR;
-                //gl_FragColor = vec4(vUv, 0., 1.);`
+                gl_FragColor *= texR;`
       );
     };
+
+    // this.mat = new THREE.MeshPhongMaterial({
+    //   color: new THREE.Color("ff2222"),
+    // });
 
     const reflector = new Reflector(g, {
       textureHeight: 1024,
@@ -113,7 +116,7 @@ export class Water {
       textureMatrix.multiply(this.mesh.matrixWorld);
 
       //   this.mesh.visible = false;
-      //   this.mat.uniforms["textureMatrix"].value = textureMatrix;
+      this.mat.uniforms["textureMatrix"].value = textureMatrix;
       reflector.matrixWorld.copy(this.mesh.matrixWorld);
 
       reflector.onBeforeRender(this.renderer, this.scene, this.camera);
@@ -124,6 +127,7 @@ export class Water {
     this.mesh.rotation.x = -Math.PI / 2;
     this.mesh.position.y += 1;
     this.scene.add(this.mesh);
+    console.log(this.mesh);
     // this.mesh.scale.set(30, 30, 1);
     // this.mesh.receiveShadow = true;
 
