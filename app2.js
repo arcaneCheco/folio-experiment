@@ -6,36 +6,19 @@ import GSAP from "gsap";
 import { Sky } from "three/examples/jsm/objects/Sky";
 import skyVertex from "./shaders/sky/vertex.glsl";
 import skyFragment from "./shaders/sky/fragment.glsl";
+import Screen from "./Screen";
+import Resources from "./Resources";
+import MsdfTitle from "./MsdfTitle";
+import Lights from "./Lights";
 
-const projects = [
-  {
-    title: "project number 1",
-    media: "projects/army.jpeg",
-  },
-  {
-    title: "project number 2",
-    media: "projects/blue-moon.png",
-  },
-  {
-    title: "project number 3",
-    media: "projects/kitten.png",
-  },
-  {
-    title: "project number 4",
-    media: "projects/piplup-thumb.png",
-  },
-  {
-    title: "project number 5",
-    media: "projects/snorlax-thumb.png",
-  },
-  {
-    title: "project number 6",
-    media: "projects/whale.jpeg",
-  },
-];
-
-class World {
+export default class World {
+  static instance;
   constructor() {
+    if (World.instance) {
+      return World.instance;
+    }
+    World.instance = this;
+
     this.time = 0;
     this.container = document.querySelector("#canvas");
     this.width = this.container.offsetWidth;
@@ -69,6 +52,7 @@ class World {
     this.cameraTarget = new THREE.Vector2();
     this.mouse = new THREE.Vector2();
     this.textureLoader = new THREE.TextureLoader();
+    this.resources = new Resources();
     this.raycaster = new THREE.Raycaster();
 
     // this.renderer.autoClear = false;
@@ -90,35 +74,7 @@ class World {
   }
 
   setLight() {
-    // this.sun = new THREE.DirectionalLight(0xffffff, 1.0);
-    // this.sun.position.set(20, 20, 15);
-    // this.scene.add(this.sun);
-    // const helper1 = new THREE.DirectionalLightHelper(this.sun);
-    // this.scene.add(helper1);
-
-    // this.sun2 = new THREE.DirectionalLight(0x40a040, 0.6);
-    // this.sun2.position.set(-20, 20, 15);
-    // this.scene.add(this.sun2);
-
-    // this.sun3 = new THREE.DirectionalLight(0xff0000, 2);
-    // this.sun3.position.set(0, 20, -20);
-    // const helper = new THREE.DirectionalLightHelper(this.sun3);
-    // this.scene.add(helper);
-    // this.scene.add(this.sun3);
-
-    this.sun4 = new THREE.SpotLight(0x0040c0, 5, 100, 3, 1, 0);
-    this.sun4.position.set(0, 15, -100);
-    this.sun4.castShadow = true;
-    // this.scene.add(new THREE.CameraHelper(this.sun4.shadow.camera));
-    const helper4 = new THREE.SpotLightHelper(this.sun4);
-    // this.scene.add(helper4);
-    this.scene.add(this.sun4);
-
-    this.ambinet = new THREE.AmbientLight(0x222222, 0.01);
-    this.scene.add(this.ambinet);
-
-    this.pointerLight = new THREE.PointLight(0xccff22, 1);
-    this.scene.add(this.pointerLight);
+    this.lights = new Lights();
   }
 
   addRandomObjects() {
@@ -165,6 +121,16 @@ class World {
     // // this.obox.position.set(-7, 4, 8);
     // this.obox.castShadow = true;
     // this.scene.add(this.obox);
+
+    this.updateRandonObjects = () => {
+      this.torus.rotation.x += 0.01;
+      this.torus.position.x -= Math.sin(this.time) * 0.05;
+      this.torus.position.z -= Math.sin(this.time) * 0.1;
+      this.torus.position.y += Math.sin(this.time) * 0.02;
+      this.box.rotation.x += 0.01;
+      this.box.rotation.y += 0.01;
+      this.ico.rotation.y += 0.01;
+    };
   }
 
   setSkyBox() {
@@ -411,43 +377,16 @@ class World {
     };
   }
 
-  titleMesh() {
-    const g = new THREE.PlaneGeometry(14, 5);
-    this.titleMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uColor: { value: new THREE.Vector2() },
-      },
-      vertexShader: `
-                  varying vec2 vUv;
-                  void main() {
-                      vec3 newPos = position;
-                      gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.);
-                      vUv = uv;
-                  }
-              `,
-      fragmentShader: `
-                  uniform vec2 uColor;
-                  varying vec2 vUv;
-                  void main() {
-                      gl_FragColor = vec4(uColor, 0., .5);
-                  }
-              `,
-      transparent: true,
-    });
-    this.titleMesh = new THREE.Mesh(g, this.titleMat);
-  }
-
-  setScreen() {
-    this.activeProject = 0;
-    this.titleMesh();
+  setProjectTitles() {
+    this.msdfTitle = new MsdfTitle();
     this.projectTitles = new THREE.Group();
     this.projectTitles.position.set(8, 8, 14);
     this.projectTitles.rotation.y = -0.3;
     this.scene.add(this.projectTitles);
-    projects.forEach((project, i) => {
-      project.mesh = this.titleMesh.clone();
+    this.resources.projects.forEach((project, i) => {
+      project.mesh = this.msdfTitle.mesh.clone();
       project.mesh.projectIndex = i;
-      project.mesh.material = this.titleMat.clone();
+      project.mesh.material = this.msdfTitle.material.clone();
       project.mesh.material.uniforms.uColor.value.set(
         Math.random(),
         Math.random()
@@ -456,50 +395,25 @@ class World {
       project.mesh.position.y = yOffset;
       this.projectTitles.add(project.mesh);
     });
-    projects.forEach((project) => {
-      project.texture = this.textureLoader.load(project.media);
-    });
+
+    this.activeProject = 0;
+
     this.onOverTitle = () => {
       const intersectsTitles = this.raycaster.intersectObjects(
-        projects.map((project) => project.mesh)
+        this.resources.projects.map((project) => project.mesh)
       );
       if (intersectsTitles.length) {
         this.activeProject = intersectsTitles[0].object.projectIndex;
-        this.screenMaterial.uniforms.uTexture.value =
-          projects[this.activeProject].texture;
+        this.screen.material.uniforms.uTexture.value =
+          this.resources.projects[this.activeProject].texture;
         // console.log(projects[this.activeProject].title);
       }
     };
-    const w = 45;
-    const h = w / (this.width / this.height);
-    const g = new THREE.PlaneGeometry(w, h, 100, 100);
-    this.screenMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture: { value: projects[0].texture },
-      },
-      vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vec3 newPos = position;
-                    newPos.z -= sin(uv.x * 3.14) * 5.;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.);
-                    vUv = uv;
-                }
-            `,
-      fragmentShader: `
-                uniform sampler2D uTexture;
+  }
 
-                varying vec2 vUv;
-                void main() {
-                    vec4 image = texture2D(uTexture, vUv);
-                    gl_FragColor = vec4(vUv, 0., 1.);
-                    gl_FragColor = image;
-                }
-            `,
-    });
-    this.screen = new THREE.Mesh(g, this.screenMaterial);
-    this.screen.position.y = 12;
-    this.scene.add(this.screen);
+  setScreen() {
+    this.setProjectTitles();
+    this.screen = new Screen();
   }
 
   fullScreenTransition() {
@@ -542,8 +456,8 @@ class World {
       this.water.buffer.onMousemove(uv.x, uv.y);
 
       const pos = intersect[0].point;
-      this.pointerLight.position.copy(pos);
-      this.pointerLight.position.z += 0.5;
+      this.lights.pointerLight.position.copy(pos);
+      this.lights.pointerLight.position.z += 0.5;
       //   this.ppMesh.material.uniforms.uPointer.value.copy(
       //     this.pointerLight.position
       //   );
@@ -570,6 +484,8 @@ class World {
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
     this.water.buffer.resize();
+
+    this.screen.onResize();
   }
 
   addListeners() {
@@ -589,13 +505,7 @@ class World {
     this.water.buffer.updateValues(delta);
     this.water.buffer.update();
 
-    this.torus.rotation.x += 0.01;
-    this.torus.position.x -= Math.sin(this.time) * 0.05;
-    this.torus.position.z -= Math.sin(this.time) * 0.1;
-    this.torus.position.y += Math.sin(this.time) * 0.02;
-    this.box.rotation.x += 0.01;
-    this.box.rotation.y += 0.01;
-    this.ico.rotation.y += 0.01;
+    this.updateRandonObjects();
 
     this.camera.rotation.x +=
       (this.cameraTarget.x - this.camera.rotation.x) * 0.1;
