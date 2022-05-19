@@ -2,9 +2,37 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { Pane } from "tweakpane";
 import { Water } from "./Water";
+import GSAP from "gsap";
 import { Sky } from "three/examples/jsm/objects/Sky";
 import skyVertex from "./shaders/sky/vertex.glsl";
 import skyFragment from "./shaders/sky/fragment.glsl";
+
+const projects = [
+  {
+    title: "project number 1",
+    media: "projects/army.jpeg",
+  },
+  {
+    title: "project number 2",
+    media: "projects/blue-moon.png",
+  },
+  {
+    title: "project number 3",
+    media: "projects/kitten.png",
+  },
+  {
+    title: "project number 4",
+    media: "projects/piplup-thumb.png",
+  },
+  {
+    title: "project number 5",
+    media: "projects/snorlax-thumb.png",
+  },
+  {
+    title: "project number 6",
+    media: "projects/whale.jpeg",
+  },
+];
 
 class World {
   constructor() {
@@ -23,8 +51,7 @@ class World {
     );
     // this.scene.position.set(0, -7.5, -18);
     // this.camera.lookAt(0, -7.5, -18);
-    this.camera.position.set(0, 5, 23);
-    this.camera.lookAt(0, 0, -50);
+    this.camera.position.set(0, 7, 23);
     this.renderer = new THREE.WebGLRenderer({ alpha: true });
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -35,8 +62,9 @@ class World {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1;
     this.container.appendChild(this.renderer.domElement);
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enabled = false;
+    this.isFullscreen = false;
+    // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    // this.controls.enabled = false;
     this.debug = new Pane();
     this.cameraTarget = new THREE.Vector2();
     this.mouse = new THREE.Vector2();
@@ -55,12 +83,10 @@ class World {
     // this.setExpSky();
     this.setSky();
     // this.setPointerParticles();
+    this.setScreen();
     this.resize();
     this.render();
-    window.addEventListener("resize", this.resize.bind(this));
-    window.addEventListener("mousemove", this.onMousemove.bind(this));
-    window.addEventListener("mousedown", this.onMousedown.bind(this));
-    window.addEventListener("mouseup", this.onMouseup.bind(this));
+    this.addListeners();
   }
 
   setLight() {
@@ -83,7 +109,6 @@ class World {
     this.sun4 = new THREE.SpotLight(0x0040c0, 5, 100, 3, 1, 0);
     this.sun4.position.set(0, 15, -100);
     this.sun4.castShadow = true;
-    console.log(this.sun4.shadow.camera);
     // this.scene.add(new THREE.CameraHelper(this.sun4.shadow.camera));
     const helper4 = new THREE.SpotLightHelper(this.sun4);
     // this.scene.add(helper4);
@@ -386,6 +411,114 @@ class World {
     };
   }
 
+  titleMesh() {
+    const g = new THREE.PlaneGeometry(14, 5);
+    this.titleMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Vector2() },
+      },
+      vertexShader: `
+                  varying vec2 vUv;
+                  void main() {
+                      vec3 newPos = position;
+                      gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.);
+                      vUv = uv;
+                  }
+              `,
+      fragmentShader: `
+                  uniform vec2 uColor;
+                  varying vec2 vUv;
+                  void main() {
+                      gl_FragColor = vec4(uColor, 0., .5);
+                  }
+              `,
+      transparent: true,
+    });
+    this.titleMesh = new THREE.Mesh(g, this.titleMat);
+  }
+
+  setScreen() {
+    this.activeProject = 0;
+    this.titleMesh();
+    this.projectTitles = new THREE.Group();
+    this.projectTitles.position.set(8, 8, 14);
+    this.projectTitles.rotation.y = -0.3;
+    this.scene.add(this.projectTitles);
+    projects.forEach((project, i) => {
+      project.mesh = this.titleMesh.clone();
+      project.mesh.projectIndex = i;
+      project.mesh.material = this.titleMat.clone();
+      project.mesh.material.uniforms.uColor.value.set(
+        Math.random(),
+        Math.random()
+      );
+      const yOffset = +i * 6;
+      project.mesh.position.y = yOffset;
+      this.projectTitles.add(project.mesh);
+    });
+    projects.forEach((project) => {
+      project.texture = this.textureLoader.load(project.media);
+    });
+    this.onOverTitle = () => {
+      const intersectsTitles = this.raycaster.intersectObjects(
+        projects.map((project) => project.mesh)
+      );
+      if (intersectsTitles.length) {
+        this.activeProject = intersectsTitles[0].object.projectIndex;
+        this.screenMaterial.uniforms.uTexture.value =
+          projects[this.activeProject].texture;
+        // console.log(projects[this.activeProject].title);
+      }
+    };
+    const w = 45;
+    const h = w / (this.width / this.height);
+    const g = new THREE.PlaneGeometry(w, h, 100, 100);
+    this.screenMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: projects[0].texture },
+      },
+      vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vec3 newPos = position;
+                    newPos.z -= sin(uv.x * 3.14) * 5.;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.);
+                    vUv = uv;
+                }
+            `,
+      fragmentShader: `
+                uniform sampler2D uTexture;
+
+                varying vec2 vUv;
+                void main() {
+                    vec4 image = texture2D(uTexture, vUv);
+                    gl_FragColor = vec4(vUv, 0., 1.);
+                    gl_FragColor = image;
+                }
+            `,
+    });
+    this.screen = new THREE.Mesh(g, this.screenMaterial);
+    this.screen.position.y = 12;
+    this.scene.add(this.screen);
+  }
+
+  fullScreenTransition() {
+    if (this.isFullscreen) {
+      GSAP.to(this.camera.position, {
+        y: 7,
+        z: 23,
+        duration: 1,
+      });
+    } else {
+      GSAP.to(this.camera.position, {
+        y: 10,
+        z: 8,
+        duration: 1,
+      });
+    }
+    this.isFullscreen = !this.isFullscreen;
+  }
+
   parallax() {
     // this.camera.rotation.y = -this.mouse.x * 0.2;
     // this.camera.rotation.x = this.mouse.y * 0.4;
@@ -415,13 +548,19 @@ class World {
       //     this.pointerLight.position
       //   );
     }
+    this.onOverTitle();
   }
 
   onMousedown() {
     this.water.buffer.onMousedown();
+    this.fullScreenTransition();
   }
   onMouseup() {
     this.water.buffer.onMouseup();
+  }
+  onWheel(event) {
+    this.projectTitles.position.y += event.deltaY * 0.1;
+    this.onOverTitle();
   }
 
   resize() {
@@ -431,6 +570,14 @@ class World {
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
     this.water.buffer.resize();
+  }
+
+  addListeners() {
+    window.addEventListener("resize", this.resize.bind(this));
+    window.addEventListener("pointermove", this.onMousemove.bind(this));
+    window.addEventListener("pointerdown", this.onMousedown.bind(this));
+    window.addEventListener("pointerup", this.onMouseup.bind(this));
+    window.addEventListener("wheel", this.onWheel.bind(this));
   }
 
   render() {
@@ -456,6 +603,7 @@ class World {
       (this.cameraTarget.y - this.camera.rotation.y) * 0.1;
 
     this.renderer.render(this.scene, this.camera);
+    // this.controls.update();
 
     window.requestAnimationFrame(this.render.bind(this));
   }

@@ -52,7 +52,7 @@ export class Water {
     this.mat.uniforms["u_buffer"] = this.buffer.uniform;
 
     this.mat.onBeforeCompile = (shader) => {
-      console.log(shader.fragmentShader);
+      //   console.log(shader.fragmentShader);
       shader.fragmentShader = shader.fragmentShader.replace(
         "uniform float opacity;",
         `uniform float opacity;
