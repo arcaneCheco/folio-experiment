@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { degToRad } from "three/src/math/MathUtils";
 import { Pane } from "tweakpane";
 import { Water } from "./Water";
 import GSAP from "gsap";
@@ -21,23 +22,24 @@ export default class World {
 
     this.time = 0;
     this.container = document.querySelector("#canvas");
-    this.width = this.container.offsetWidth;
-    this.height = this.container.offsetHeight;
+    this.resolutionX = this.container.offsetWidth;
+    this.resolutionY = this.container.offsetHeight;
     this.scene = new THREE.Scene();
     // this.scene.fog = new THREE.Fog(0xdfe9f3, 4, 16);
     // this.scene.fog = new THREE.FogExp2(0xdfe9f3, 0.05);
     this.camera = new THREE.PerspectiveCamera(
       85,
-      this.width / this.height,
+      this.resolutionX / this.resolutionY,
       0.1,
       2000
     );
     // this.scene.position.set(0, -7.5, -18);
     // this.camera.lookAt(0, -7.5, -18);
+    this.camera.originalPosition = new THREE.Vector3(0, 7, 23);
     this.camera.position.set(0, 7, 23);
     this.renderer = new THREE.WebGLRenderer({ alpha: true });
-    this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setSize(this.resolutionX, this.resolutionY);
+    this.renderer.setPixelRatio(1);
     // this.renderer.setClearColor(0x444444);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -46,7 +48,9 @@ export default class World {
     this.renderer.toneMappingExposure = 1;
     this.container.appendChild(this.renderer.domElement);
     this.isFullscreen = false;
-    // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.enableParallax = false;
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    console.log(this.controls);
     // this.controls.enabled = false;
     this.debug = new Pane();
     this.cameraTarget = new THREE.Vector2();
@@ -68,9 +72,9 @@ export default class World {
     this.setSky();
     // this.setPointerParticles();
     this.setScreen();
-    this.resize();
     this.render();
     this.addListeners();
+    this.resize();
   }
 
   setLight() {
@@ -275,22 +279,30 @@ export default class World {
     this.ppScene = new THREE.Scene();
     this.ppScene.add(this.ppMesh);
     this.mask = { read: null, write: null };
-    this.mask.read = new THREE.WebGLRenderTarget(this.width, this.height, {
-      stencilBuffer: false,
-      depthBuffer: false,
-      type: THREE.FloatType,
-    });
-    this.mask.write = new THREE.WebGLRenderTarget(this.width, this.height, {
-      stencilBuffer: false,
-      depthBuffer: false,
-      type: THREE.FloatType,
-    });
-    // this.ppRT = new THREE.WebGLRenderTarget(this.width, this.height, {
+    this.mask.read = new THREE.WebGLRenderTarget(
+      this.resolutionX,
+      this.resolutionY,
+      {
+        stencilBuffer: false,
+        depthBuffer: false,
+        type: THREE.FloatType,
+      }
+    );
+    this.mask.write = new THREE.WebGLRenderTarget(
+      this.resolutionX,
+      this.resolutionY,
+      {
+        stencilBuffer: false,
+        depthBuffer: false,
+        type: THREE.FloatType,
+      }
+    );
+    // this.ppRT = new THREE.WebGLRenderTarget(this.resolutionX, this.resolutionY, {
     //   stencilBuffer: false,
     //   depthBuffer: false,
     //   type: THREE.FloatType,
     // });
-    // this.ppRTWrite = new THREE.WebGLRenderTarget(this.width, this.height, {
+    // this.ppRTWrite = new THREE.WebGLRenderTarget(this.resolutionX, this.resolutionY, {
     //   stencilBuffer: false,
     //   depthBuffer: false,
     //   type: THREE.FloatType,
@@ -326,7 +338,9 @@ export default class World {
         `,
       uniforms: {
         uTexture: this.ppUniform,
-        uResolution: { value: new THREE.Vector2(this.width, this.height) },
+        uResolution: {
+          value: new THREE.Vector2(this.resolutionX, this.resolutionY),
+        },
         uSamples: { value: 1 },
         uPointer: { value: new THREE.Vector2() },
       },
@@ -378,19 +392,14 @@ export default class World {
   }
 
   setProjectTitles() {
-    this.msdfTitle = new MsdfTitle();
+    // this.msdfTitle = new MsdfTitle(`hello ${Math.round(Math.random() * 100)}`);
     this.projectTitles = new THREE.Group();
     this.projectTitles.position.set(8, 8, 14);
     this.projectTitles.rotation.y = -0.3;
     this.scene.add(this.projectTitles);
     this.resources.projects.forEach((project, i) => {
-      project.mesh = this.msdfTitle.mesh.clone();
+      project.mesh = new MsdfTitle(project.title).mesh;
       project.mesh.projectIndex = i;
-      project.mesh.material = this.msdfTitle.material.clone();
-      project.mesh.material.uniforms.uColor.value.set(
-        Math.random(),
-        Math.random()
-      );
       const yOffset = +i * 6;
       project.mesh.position.y = yOffset;
       this.projectTitles.add(project.mesh);
@@ -403,10 +412,24 @@ export default class World {
         this.resources.projects.map((project) => project.mesh)
       );
       if (intersectsTitles.length) {
-        this.activeProject = intersectsTitles[0].object.projectIndex;
+        const index = intersectsTitles[0].object.projectIndex;
+
+        if (this.activeProject === index) return;
+
         this.screen.material.uniforms.uTexture.value =
-          this.resources.projects[this.activeProject].texture;
-        // console.log(projects[this.activeProject].title);
+          this.resources.projects[index].texture;
+
+        this.resources.projects[index].mesh.material.uniforms.uColor.value.set(
+          1,
+          0,
+          0
+        );
+
+        this.resources.projects[
+          this.activeProject
+        ].mesh.material.uniforms.uColor.value.set(1, 1, 0);
+
+        this.activeProject = index;
       }
     };
   }
@@ -417,18 +440,42 @@ export default class World {
   }
 
   fullScreenTransition() {
+    const h = this.screen.mesh.scale.y;
+    // scale screen width to match aspect ration
+    const alpha = this.camera.fov / 2;
+    const d = (0.5 * h) / Math.tan(degToRad(alpha));
+
+    const dummy = new THREE.Object3D();
+    dummy.position
+      .copy(this.screen.mesh.position)
+      .add(this.screen.direction.clone().multiplyScalar(d));
+
     if (this.isFullscreen) {
       GSAP.to(this.camera.position, {
-        y: 7,
-        z: 23,
+        ...this.camera.originalPosition,
         duration: 1,
       });
+      GSAP.to(this.camera.rotation, {
+        x: 0,
+        y: 0,
+        z: 0,
+        duration: 1,
+        onComplete: () => (this.enableParallax = true),
+      });
+      this.screen.exitFullscreen();
     } else {
+      this.enableParallax = false;
       GSAP.to(this.camera.position, {
-        y: 10,
-        z: 8,
+        ...dummy.position,
         duration: 1,
       });
+      GSAP.to(this.camera.rotation, {
+        x: this.screen.mesh.rotation.x,
+        y: this.screen.mesh.rotation.y,
+        z: this.screen.mesh.rotation.z,
+        duration: 1,
+      });
+      this.screen.enterFullscreen();
     }
     this.isFullscreen = !this.isFullscreen;
   }
@@ -441,11 +488,11 @@ export default class World {
   }
 
   onMousemove(event) {
-    this.mouse.x = (2 * event.clientX) / this.width - 1;
-    this.mouse.y = (-2 * event.clientY) / this.height + 1;
+    this.mouse.x = (2 * event.clientX) / this.resolutionX - 1;
+    this.mouse.y = (-2 * event.clientY) / this.resolutionY + 1;
     // this.ppPostMesh.material.uniforms.uPointer.value.copy(this.mouse);
 
-    this.parallax();
+    this.enableParallax && this.parallax();
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersect = this.raycaster.intersectObject(this.water.t);
@@ -478,10 +525,10 @@ export default class World {
   }
 
   resize() {
-    this.width = this.container.offsetWidth;
-    this.height = this.container.offsetHeight;
-    this.renderer.setSize(this.width, this.height);
-    this.camera.aspect = this.width / this.height;
+    this.resolutionX = this.container.offsetWidth;
+    this.resolutionY = this.container.offsetHeight;
+    this.renderer.setSize(this.resolutionX, this.resolutionY);
+    this.camera.aspect = this.resolutionX / this.resolutionY;
     this.camera.updateProjectionMatrix();
     this.water.buffer.resize();
 
@@ -491,9 +538,9 @@ export default class World {
   addListeners() {
     window.addEventListener("resize", this.resize.bind(this));
     window.addEventListener("pointermove", this.onMousemove.bind(this));
-    window.addEventListener("pointerdown", this.onMousedown.bind(this));
-    window.addEventListener("pointerup", this.onMouseup.bind(this));
-    window.addEventListener("wheel", this.onWheel.bind(this));
+    // window.addEventListener("pointerdown", this.onMousedown.bind(this));
+    // window.addEventListener("pointerup", this.onMouseup.bind(this));
+    // window.addEventListener("wheel", this.onWheel.bind(this));
   }
 
   render() {
@@ -507,13 +554,14 @@ export default class World {
 
     this.updateRandonObjects();
 
-    this.camera.rotation.x +=
-      (this.cameraTarget.x - this.camera.rotation.x) * 0.1;
-    this.camera.rotation.y +=
-      (this.cameraTarget.y - this.camera.rotation.y) * 0.1;
+    if (this.enableParallax) {
+      this.camera.rotation.x +=
+        (this.cameraTarget.x - this.camera.rotation.x) * 0.1;
+      this.camera.rotation.y +=
+        (this.cameraTarget.y - this.camera.rotation.y) * 0.1;
+    }
 
     this.renderer.render(this.scene, this.camera);
-    // this.controls.update();
 
     window.requestAnimationFrame(this.render.bind(this));
   }

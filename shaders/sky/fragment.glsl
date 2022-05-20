@@ -43,7 +43,7 @@
 
 
 
-#define OCTAVES 2
+#define OCTAVES 1
 
 uniform float uTime;
 uniform sampler2D uGreyNoise;

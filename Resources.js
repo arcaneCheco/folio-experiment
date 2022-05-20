@@ -7,7 +7,12 @@ export default class Resources {
     this.textureLoader = this.world.textureLoader;
     this.projects = projects;
     this.projects.forEach((project) => {
-      project.texture = this.textureLoader.load(project.media);
+      this.textureLoader.load(project.media, (texture) => {
+        project.texture = texture;
+        const data = texture.source.data;
+        project.imageAspect = data.width / data.height;
+        console.log(project.imageAspect);
+      });
     });
   }
 }
