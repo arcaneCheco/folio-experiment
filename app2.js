@@ -11,6 +11,7 @@ import Screen from "./Screen";
 import Resources from "./Resources";
 import MsdfTitle from "./MsdfTitle";
 import Lights from "./Lights";
+import Camera from "./Camera";
 
 export default class World {
   static instance;
@@ -27,16 +28,7 @@ export default class World {
     this.scene = new THREE.Scene();
     // this.scene.fog = new THREE.Fog(0xdfe9f3, 4, 16);
     // this.scene.fog = new THREE.FogExp2(0xdfe9f3, 0.05);
-    this.camera = new THREE.PerspectiveCamera(
-      85,
-      this.resolutionX / this.resolutionY,
-      0.1,
-      2000
-    );
-    // this.scene.position.set(0, -7.5, -18);
-    // this.camera.lookAt(0, -7.5, -18);
-    this.camera.originalPosition = new THREE.Vector3(0, 7, 23);
-    this.camera.position.set(0, 7, 23);
+    this.setCamera();
     this.renderer = new THREE.WebGLRenderer({ alpha: true });
     this.renderer.setSize(this.resolutionX, this.resolutionY);
     this.renderer.setPixelRatio(1);
@@ -48,9 +40,9 @@ export default class World {
     this.renderer.toneMappingExposure = 1;
     this.container.appendChild(this.renderer.domElement);
     this.isFullscreen = false;
-    this.enableParallax = false;
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    console.log(this.controls);
+    this.enableParallax = true;
+    // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    // console.log(this.controls);
     // this.controls.enabled = false;
     this.debug = new Pane();
     this.cameraTarget = new THREE.Vector2();
@@ -75,6 +67,11 @@ export default class World {
     this.render();
     this.addListeners();
     this.resize();
+  }
+
+  setCamera() {
+    this.cameraWrapper = new Camera();
+    this.camera = this.cameraWrapper.instance;
   }
 
   setLight() {
@@ -418,6 +415,7 @@ export default class World {
 
         this.screen.material.uniforms.uTexture.value =
           this.resources.projects[index].texture;
+        this.screen.textureAspect = this.resources.projects[index].imageAspect;
 
         this.resources.projects[index].mesh.material.uniforms.uColor.value.set(
           1,
@@ -452,7 +450,7 @@ export default class World {
 
     if (this.isFullscreen) {
       GSAP.to(this.camera.position, {
-        ...this.camera.originalPosition,
+        ...this.cameraWrapper.originalPosition,
         duration: 1,
       });
       GSAP.to(this.camera.rotation, {
@@ -528,8 +526,7 @@ export default class World {
     this.resolutionX = this.container.offsetWidth;
     this.resolutionY = this.container.offsetHeight;
     this.renderer.setSize(this.resolutionX, this.resolutionY);
-    this.camera.aspect = this.resolutionX / this.resolutionY;
-    this.camera.updateProjectionMatrix();
+    this.cameraWrapper.onResize();
     this.water.buffer.resize();
 
     this.screen.onResize();
@@ -538,9 +535,9 @@ export default class World {
   addListeners() {
     window.addEventListener("resize", this.resize.bind(this));
     window.addEventListener("pointermove", this.onMousemove.bind(this));
-    // window.addEventListener("pointerdown", this.onMousedown.bind(this));
-    // window.addEventListener("pointerup", this.onMouseup.bind(this));
-    // window.addEventListener("wheel", this.onWheel.bind(this));
+    window.addEventListener("pointerdown", this.onMousedown.bind(this));
+    window.addEventListener("pointerup", this.onMouseup.bind(this));
+    window.addEventListener("wheel", this.onWheel.bind(this));
   }
 
   render() {

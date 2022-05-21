@@ -9,12 +9,16 @@ export default class Screen {
     this.world = new World();
     this.scene = this.world.scene;
     this.resources = this.world.resources;
+    this.textureAspect = this.resources.projects[0].imageAspect;
     const g = new THREE.PlaneGeometry(1, 1, 100, 100);
+
+    console.log(this.resources.projects[0].imageAspect, "hhherre");
 
     this.material = new THREE.ShaderMaterial({
       uniforms: {
         uTexture: { value: this.resources.projects[0].texture },
         uBend: { value: 0 },
+        uvRate1: { value: new THREE.Vector2(1, 1) },
       },
       vertexShader,
       fragmentShader,
@@ -36,17 +40,29 @@ export default class Screen {
     this.direction = this.dummyDirection.clone().applyEuler(this.mesh.rotation);
     console.log(this.direction);
 
+    this.mesh.scale.set(30, 20, 1);
+
     // this.mesh.updateMatrix();
     this.scene.add(this.mesh);
   }
 
   enterFullscreen() {
+    const aspect = this.world.resolutionX / this.world.resolutionY;
+    // const screenHeight = 45 / aspect;
+    GSAP.to(this.mesh.scale, {
+      x: 20 * aspect,
+      duration: 1,
+    });
     GSAP.to(this.material.uniforms.uBend, {
       value: 0,
       duration: 1,
     });
   }
   exitFullscreen() {
+    GSAP.to(this.mesh.scale, {
+      x: 30,
+      duration: 1,
+    });
     GSAP.to(this.material.uniforms.uBend, {
       value: 5,
       duration: 1,
@@ -55,9 +71,18 @@ export default class Screen {
 
   onResize() {
     const aspect = this.world.resolutionX / this.world.resolutionY;
+    this.mesh.scale.x = 20 * aspect;
+    // this.material.uniforms.uMeshAspect.value = aspect;
+    // this.material.uniforms.uvRate1.value.y = 20 / (20 * aspect);
 
-    const screenHeight = 45 / aspect;
-    this.mesh.scale.set(45, screenHeight, 1);
-    // console.log(this.mesh.rotation.toArray());
+    const imageAspect = this.resources.projects[0].imageAspect;
+    const meshAspect = this.world.resolutionX / this.world.resolutionY;
+    if (meshAspect > imageAspect) {
+      this.material.uniforms.uvRate1.value.x = 1;
+      this.material.uniforms.uvRate1.value.y = imageAspect / meshAspect;
+    } else {
+      this.material.uniforms.uvRate1.value.x = meshAspect / imageAspect;
+      this.material.uniforms.uvRate1.value.y = 1;
+    }
   }
 }
