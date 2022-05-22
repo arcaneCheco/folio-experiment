@@ -1,26 +1,23 @@
 import * as THREE from "three";
 import { Reflector } from "three/examples/jsm/objects/Reflector";
 import { BufferTexture } from "./BufferTexture";
+import WaterRippleBuffer from "./WaterRippleBuffer";
 import f from "./fragment.glsl";
 import v from "./vertex.glsl";
+import World from "./app2";
 
 export class Water {
-  constructor({ renderer, camera, scene, width, height }) {
-    this.renderer = renderer;
-    this.camera = camera;
-    this.scene = scene;
+  constructor() {
+    this.world = new World();
+    this.renderer = this.world.renderer;
+    this.camera = this.world.camera;
+    this.scene = this.world.scene;
 
-    this.buffer = new BufferTexture({
-      renderer: this.renderer,
-      camera: this.camera,
-      scene: this.scene,
-    });
+    this.buffer = new WaterRippleBuffer();
 
-    const g = new THREE.PlaneGeometry(250, 250, 600, 600);
+    const g = new THREE.PlaneGeometry(1, 1, 600, 600);
+    // const g = new THREE.PlaneGeometry(250, 250, 600, 600);
     // const g = new THREE.CircleGeometry(100, 500, 0, Math.PI * 2);
-
-    // const g = new THREE.PlaneGeometry(30, 30, 600, 600);
-    // const g = new THREE.PlaneGeometry(1, 1, 600, 600);
 
     this.mat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([
@@ -73,20 +70,20 @@ export class Water {
     //   color: new THREE.Color("ff2222"),
     // });
 
-    const reflector = new Reflector(g, {
+    this.reflector = new Reflector(g, {
       textureHeight: 1024,
       textureWidth: 1024,
       color: new THREE.Color(0xffffff),
       clipBias: 0.05,
     });
-    console.log(reflector);
-    reflector.rotation.x = -Math.PI / 2.0;
-    reflector.position.y += 1;
-    reflector.matrixAutoUpdate = false;
-    reflector.updateMatrix();
-    // this.scene.add(reflector);
+    console.log(this.reflector);
+    this.reflector.rotation.x = -Math.PI / 2.0;
+    this.reflector.position.y += 1;
+    this.reflector.matrixAutoUpdate = false;
+    this.reflector.updateMatrix();
+    // this.scene.add(this.reflector);
     this.mat.uniforms.tReflectionMap.value =
-      reflector.getRenderTarget().texture;
+      this.reflector.getRenderTarget().texture;
 
     const textureMatrix = new THREE.Matrix4();
     this.mat.uniforms["textureMatrix"].value = textureMatrix;
@@ -117,9 +114,9 @@ export class Water {
 
       //   this.mesh.visible = false;
       this.mat.uniforms["textureMatrix"].value = textureMatrix;
-      reflector.matrixWorld.copy(this.mesh.matrixWorld);
+      this.reflector.matrixWorld.copy(this.mesh.matrixWorld);
 
-      reflector.onBeforeRender(this.renderer, this.scene, this.camera);
+      this.reflector.onBeforeRender(this.renderer, this.scene, this.camera);
       //   this.mesh.visible = true;
     };
 
@@ -127,17 +124,21 @@ export class Water {
     this.mesh.rotation.x = -Math.PI / 2;
     this.mesh.position.y += 1;
     this.scene.add(this.mesh);
-    console.log(this.mesh);
-    // this.mesh.scale.set(30, 30, 1);
-    // this.mesh.receiveShadow = true;
 
     this.t = new THREE.Mesh(
-      //   new THREE.PlaneGeometry(30, 30),
-      new THREE.PlaneGeometry(250, 250),
+      new THREE.PlaneGeometry(1, 1),
       new THREE.MeshBasicMaterial({ visible: false })
     );
     this.t.rotation.x = -Math.PI / 2;
     this.t.position.y += 1;
     this.scene.add(this.t);
+  }
+
+  onResize() {
+    this.mesh.scale.set(this.world.viewport.x, this.world.viewport.x, 1);
+    this.reflector.scale.set(this.world.viewport.x, this.world.viewport.x, 1);
+    this.t.scale.set(this.world.viewport.x, this.world.viewport.x, 1);
+
+    this.buffer.resize();
   }
 }

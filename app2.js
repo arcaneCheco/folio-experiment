@@ -4,7 +4,8 @@ import { degToRad } from "three/src/math/MathUtils";
 import { Pane } from "tweakpane";
 import { Water } from "./Water";
 import GSAP from "gsap";
-import { Sky } from "three/examples/jsm/objects/Sky";
+// import { Sky } from "three/examples/jsm/objects/Sky";
+import Sky from "./Sky";
 import skyVertex from "./shaders/sky/vertex.glsl";
 import skyFragment from "./shaders/sky/fragment.glsl";
 import Screen from "./Screen";
@@ -12,6 +13,7 @@ import Resources from "./Resources";
 import MsdfTitle from "./MsdfTitle";
 import Lights from "./Lights";
 import Camera from "./Camera";
+import RendererWrapper from "./RendererWrapper";
 
 export default class World {
   static instance;
@@ -25,23 +27,15 @@ export default class World {
     this.container = document.querySelector("#canvas");
     this.resolutionX = this.container.offsetWidth;
     this.resolutionY = this.container.offsetHeight;
+    this.viewport = new THREE.Vector2();
     this.scene = new THREE.Scene();
     // this.scene.fog = new THREE.Fog(0xdfe9f3, 4, 16);
     // this.scene.fog = new THREE.FogExp2(0xdfe9f3, 0.05);
     this.setCamera();
-    this.renderer = new THREE.WebGLRenderer({ alpha: true });
-    this.renderer.setSize(this.resolutionX, this.resolutionY);
-    this.renderer.setPixelRatio(1);
-    // this.renderer.setClearColor(0x444444);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.outputEncoding = THREE.sRGBEncoding;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1;
-    this.container.appendChild(this.renderer.domElement);
+    this.setRenderer();
     this.isFullscreen = false;
-    this.enableParallax = true;
-    // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.enableParallax = false;
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     // console.log(this.controls);
     // this.controls.enabled = false;
     this.debug = new Pane();
@@ -51,13 +45,13 @@ export default class World {
     this.resources = new Resources();
     this.raycaster = new THREE.Raycaster();
 
-    // this.renderer.autoClear = false;
-    this.water = new Water({
-      renderer: this.renderer,
-      camera: this.camera,
-      scene: this.scene,
-    });
+    // this.water = new Water({
+    //   renderer: this.renderer,
+    //   camera: this.camera,
+    //   scene: this.scene,
+    // });
     this.setLight();
+    this.setWater();
     this.addRandomObjects();
     // this.setSkyBox();
     // this.setExpSky();
@@ -69,6 +63,11 @@ export default class World {
     this.resize();
   }
 
+  setRenderer() {
+    this.rendererWrapper = new RendererWrapper();
+    this.renderer = this.rendererWrapper.instance;
+  }
+
   setCamera() {
     this.cameraWrapper = new Camera();
     this.camera = this.cameraWrapper.instance;
@@ -76,6 +75,10 @@ export default class World {
 
   setLight() {
     this.lights = new Lights();
+  }
+
+  setWater() {
+    this.water = new Water();
   }
 
   addRandomObjects() {
@@ -217,25 +220,7 @@ export default class World {
   }
 
   setSky() {
-    // const g = new THREE.BoxGeometry(1, 1, 1);
-    const g = new THREE.SphereGeometry(1);
-    // const g = new THREE.PlaneGeometry(1, 1);
-    const m = new THREE.ShaderMaterial({
-      side: THREE.BackSide,
-      depthWrite: false,
-      vertexShader: skyVertex,
-      fragmentShader: skyFragment,
-      uniforms: {
-        uGreyNoise: { value: this.textureLoader.load("greyNoise.png") },
-        uTime: { value: this.time },
-      },
-      transparent: true,
-    });
-    this.sky = new THREE.Mesh(g, m);
-    // this.sky.rotation.y = Math.PI / 2;
-    // this.sky.rotation.x = Math.PI / 2.5;
-    this.sky.scale.setScalar(100);
-    this.scene.add(this.sky);
+    this.sky = new Sky();
   }
 
   setPointerParticles() {
@@ -512,7 +497,7 @@ export default class World {
 
   onMousedown() {
     this.water.buffer.onMousedown();
-    this.fullScreenTransition();
+    // this.fullScreenTransition();
   }
   onMouseup() {
     this.water.buffer.onMouseup();
@@ -525,9 +510,13 @@ export default class World {
   resize() {
     this.resolutionX = this.container.offsetWidth;
     this.resolutionY = this.container.offsetHeight;
-    this.renderer.setSize(this.resolutionX, this.resolutionY);
+    const h = 2 * this.camera.position.z * Math.tan(this.camera.fov / 2);
+    const w = (h * this.resolutionX) / this.resolutionY;
+    this.viewport.set(h, w);
+    this.rendererWrapper.onResize();
     this.cameraWrapper.onResize();
-    this.water.buffer.resize();
+    this.water.onResize();
+    this.sky.onResize();
 
     this.screen.onResize();
   }
@@ -543,7 +532,7 @@ export default class World {
   render() {
     let delta = 0.01633;
     this.time += delta;
-    this.sky && (this.sky.material.uniforms.uTime.value = this.time);
+    this.sky.update();
 
     this.water.updateReflector();
     this.water.buffer.updateValues(delta);

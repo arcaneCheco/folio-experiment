@@ -40,7 +40,9 @@ export default class Screen {
     this.direction = this.dummyDirection.clone().applyEuler(this.mesh.rotation);
     console.log(this.direction);
 
-    this.mesh.scale.set(30, 20, 1);
+    this.size = new THREE.Vector3(30, 20, 1);
+
+    this.mesh.scale.copy(this.size);
 
     // this.mesh.updateMatrix();
     this.scene.add(this.mesh);
@@ -70,10 +72,8 @@ export default class Screen {
   }
 
   onResize() {
-    const aspect = this.world.resolutionX / this.world.resolutionY;
-    this.mesh.scale.x = 20 * aspect;
-    // this.material.uniforms.uMeshAspect.value = aspect;
-    // this.material.uniforms.uvRate1.value.y = 20 / (20 * aspect);
+    // const aspect = this.world.resolutionX / this.world.resolutionY;
+    // this.mesh.scale.x = 20 * aspect;
 
     const imageAspect = this.resources.projects[0].imageAspect;
     const meshAspect = this.world.resolutionX / this.world.resolutionY;
