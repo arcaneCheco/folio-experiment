@@ -534,9 +534,10 @@ export default class World {
     this.time += delta;
     this.sky.update();
 
-    this.water.updateReflector();
-    this.water.buffer.updateValues(delta);
-    this.water.buffer.update();
+    this.water.update(delta);
+    // this.water.updateReflector();
+    // this.water.buffer.updateValues(delta);
+    // this.water.buffer.update();
 
     this.updateRandonObjects();
 

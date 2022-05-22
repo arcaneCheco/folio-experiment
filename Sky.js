@@ -28,7 +28,7 @@ export default class Sky {
   }
 
   onResize() {
-    this.mesh.scale.setScalar((this.world.viewport.y / 2) * 0.8);
+    this.mesh.scale.setScalar((this.world.viewport.x / 2) * 1);
   }
 
   update() {
