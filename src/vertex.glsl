@@ -31,7 +31,9 @@ void main() {
 	#include <defaultnormal_vertex>
     vNormal = normalize(transformedNormal);
 
-    float heightValue = texture2D( u_buffer, uv + 0.02).x * 0.1 - 0.1;
+    float mag = 0.5; // 0.1
+    float offset = 0.; // 0.02
+    float heightValue = texture2D( u_buffer, uv + offset).x * mag - mag;
     float l = 2.;
     // heightValue = clamp(heightValue, -l, l);
 	vec3 transformed = vec3( position.x, position.y, heightValue);

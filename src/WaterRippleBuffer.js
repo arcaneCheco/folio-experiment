@@ -40,7 +40,7 @@ export default class WaterRippleBuffer {
         this.uniform.value = this.mask.read.texture;
       },
     };
-    this.setRenderTargets(512);
+    this.setRenderTargets(128);
     this.setMesh();
     this.resize();
   }
@@ -60,8 +60,8 @@ export default class WaterRippleBuffer {
     this.mask.write = new WebGLRenderTarget(size, size, options);
     this.mask.swap();
 
-    this.rtTexture = new WebGLRenderTarget(size, size, options);
-    this.rtTexture2 = new WebGLRenderTarget(size, size, options);
+    // this.rtTexture = new WebGLRenderTarget(size, size, options);
+    // this.rtTexture2 = new WebGLRenderTarget(size, size, options);
   }
 
   setMesh() {
@@ -104,11 +104,14 @@ export default class WaterRippleBuffer {
     this.uniforms.u_mouse.value.z = 0;
   }
 
-  resize() {
+  resize(w, h) {
     this.uniforms.u_resolution.value.x = window.innerWidth;
     this.uniforms.u_resolution.value.y = window.innerHeight;
 
     this.uniforms.u_frame.value = -1;
+
+    // this.mask.read.setSize(w, h);
+    // this.mask.write.setSize(w, h);
   }
 
   updateValues(delta) {

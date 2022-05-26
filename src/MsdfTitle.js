@@ -21,7 +21,7 @@ export default class MsdfTitle {
       letterSpacing: 0,
       align: "center",
       lineHeight: 1,
-      lineWidth: 3,
+      lineWidth: 2,
     });
 
     this.material = new THREE.ShaderMaterial({

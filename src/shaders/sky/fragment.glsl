@@ -114,9 +114,9 @@ void main() {
     vec3 col = vec3(c);
     float uC = 0.9;
     col.r -= dot(q, r) * 5. * uC;
-    col.g -= dot(q, r) * 5. * 0.3;
+    // col.g -= dot(q, r) * 5. * 0.3;
     // col.b += dot(q, r) * 10. * (1. - uC);
-    col.b += dot(q, r) * 10. * (uC);
+    // col.b -= dot(q, r) * 1. * (uC);
 
     float strength = smoothstep(1., 0.0, 1.5*distance(vUv, vec2(0.5)));
     col = mix(vec3(0.), col, strength);
@@ -140,7 +140,7 @@ void main() {
 
     float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;
     vec3 posOffset = vec3(0., 1., 0.);
-    vec3 direction = normalize( (vWorldPosition - posOffset) - vec3(0., 5, 23) );
+    vec3 direction = normalize( (vWorldPosition - posOffset) - vec3(0., 3, 23) );
     vec3 vSunDirection = vec3(0., 0., -1);
     float cosTheta = dot( direction, vSunDirection );
     float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00002, cosTheta );
@@ -148,5 +148,5 @@ void main() {
     sundisk = step(moonSize, cosTheta);
     sundisk = smoothstep(moonSize, moonSize * 1.005, cosTheta);
     gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3(1.), sundisk - 0.);
-    // gl_FragColor += sundisk;
+    gl_FragColor += 0.2;
 }

@@ -3,6 +3,7 @@ import World from "./app2";
 import vertexShader from "./shaders/screen/vertex.glsl";
 import fragmentShader from "./shaders/screen/fragment.glsl";
 import GSAP from "gsap";
+import { degToRad } from "three/src/math/MathUtils";
 
 export default class Screen {
   constructor() {
@@ -11,8 +12,6 @@ export default class Screen {
     this.resources = this.world.resources;
     this.textureAspect = this.resources.projects[0].imageAspect;
     const g = new THREE.PlaneGeometry(1, 1, 100, 100);
-
-    console.log(this.resources.projects[0].imageAspect, "hhherre");
 
     this.material = new THREE.ShaderMaterial({
       uniforms: {
@@ -28,23 +27,10 @@ export default class Screen {
 
     this.dummyDirection = new THREE.Vector3(0, 0, 1);
 
-    this.offsetAboveGround = 2;
-    // this.mesh.matrixAutoUpdate = false;
-    this.mesh.position.x = -4;
-    this.mesh.position.y = 12;
-    this.mesh.rotateY(Math.PI / 6);
-    // this.direction = this.dummyDirection
-    //   .clone()
-    //   .applyQuaternion(this.mesh.quaternion);
-    // console.log(this.direction);
+    this.offsetAboveGround = 0;
+    // this.mesh.rotateY(Math.PI / 10);
     this.direction = this.dummyDirection.clone().applyEuler(this.mesh.rotation);
-    console.log(this.direction);
 
-    this.size = new THREE.Vector3(30, 20, 1);
-
-    this.mesh.scale.copy(this.size);
-
-    // this.mesh.updateMatrix();
     this.scene.add(this.mesh);
   }
 
@@ -52,28 +38,50 @@ export default class Screen {
     const aspect = this.world.resolutionX / this.world.resolutionY;
     // const screenHeight = 45 / aspect;
     GSAP.to(this.mesh.scale, {
-      x: 20 * aspect,
-      duration: 1,
+      x: this.viewportDimensions.x,
+      y: this.viewportDimensions.y,
+      duration: 0.5,
+    });
+    GSAP.to(this.mesh.position, {
+      x: 0,
+      y: this.world.camera.position.y,
+      duration: 0.5,
     });
     GSAP.to(this.material.uniforms.uBend, {
       value: 0,
-      duration: 1,
+      duration: 0.5,
     });
   }
   exitFullscreen() {
-    GSAP.to(this.mesh.scale, {
-      x: 30,
-      duration: 1,
-    });
-    GSAP.to(this.material.uniforms.uBend, {
-      value: 5,
-      duration: 1,
-    });
+    this.onResize();
+    // GSAP.to(this.mesh.scale, {
+    //   x: 30,
+    //   duration: 1,
+    // });
+    // GSAP.to(this.material.uniforms.uBend, {
+    //   value: 5,
+    //   duration: 1,
+    // });
   }
 
   onResize() {
-    // const aspect = this.world.resolutionX / this.world.resolutionY;
-    // this.mesh.scale.x = 20 * aspect;
+    this.distanceToCamera = this.world.dominantSize * 0.05;
+    this.viewportDimensions = new THREE.Vector2();
+    const h =
+      2 * this.distanceToCamera * Math.tan(degToRad(this.world.camera.fov) / 2);
+    const w = h * (this.world.resolutionX / this.world.resolutionY);
+    this.viewportDimensions.set(w, h);
+    this.mesh.scale.set(
+      this.viewportDimensions.x * 0.45,
+      this.viewportDimensions.y * 0.45,
+      1
+    );
+    this.mesh.position.y =
+      this.viewportDimensions.y * 0.225 + this.world.camera.position.y;
+    this.mesh.position.z = this.world.camera.position.z - this.distanceToCamera;
+    this.mesh.position.x = -this.viewportDimensions.x * 0.15;
+
+    // this.mesh.lookAt(this.world.camera.position);
 
     const imageAspect = this.resources.projects[0].imageAspect;
     const meshAspect = this.world.resolutionX / this.world.resolutionY;

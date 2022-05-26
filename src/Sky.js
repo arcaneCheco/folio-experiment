@@ -9,7 +9,7 @@ export default class Sky {
     this.scene = this.world.scene;
     this.textureLoader = this.world.textureLoader;
 
-    // const g = new THREE.BoxGeometry(1, 1, 1);
+    // const geometry = new THREE.BoxGeometry(1, 1, 1);
     const geometry = new THREE.SphereGeometry(1);
     // const g = new THREE.PlaneGeometry(1, 1);
     this.material = new THREE.ShaderMaterial({
@@ -24,11 +24,12 @@ export default class Sky {
       transparent: true,
     });
     this.mesh = new THREE.Mesh(geometry, this.material);
+    // this.mesh.scale.set(1000, 1000, 1000);
     this.scene.add(this.mesh);
   }
 
   onResize() {
-    this.mesh.scale.setScalar((this.world.viewport.x / 2) * 1);
+    this.mesh.scale.setScalar(this.world.settings.environmentSize / 2); // sphere
   }
 
   update() {

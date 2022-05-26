@@ -42,7 +42,7 @@ export default class Text {
     const heightA = this.glyphs["A"].height;
 
     // Use baseline so that actual text height is as close to 'size' value as possible
-    this.scale = this.size / baseline;
+    // this.scale = this.size / baseline;
     this.scale = this.size / heightA;
     // this.scale = 1;
 
@@ -248,7 +248,7 @@ export default class Text {
   }
 
   onResize(width) {
-    this.width = width;
+    // this.width = width;
     this.layout();
     this.populateBuffers();
   }

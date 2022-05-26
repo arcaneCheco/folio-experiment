@@ -14,6 +14,9 @@ import MsdfTitle from "./MsdfTitle";
 import Lights from "./Lights";
 import Camera from "./Camera";
 import RendererWrapper from "./RendererWrapper";
+import AllTitles from "./AllTitles";
+import FaScreen from "./FaScreen";
+import ScreenTitles from "./ScreenTitles";
 
 export default class World {
   static instance;
@@ -24,6 +27,9 @@ export default class World {
     World.instance = this;
 
     this.time = 0;
+    this.template = window.location.pathname;
+    this.fromToRoute = "";
+    this.route = "/";
     this.container = document.querySelector("#canvas");
     this.resolutionX = this.container.offsetWidth;
     this.resolutionY = this.container.offsetHeight;
@@ -31,25 +37,20 @@ export default class World {
     this.scene = new THREE.Scene();
     // this.scene.fog = new THREE.Fog(0xdfe9f3, 4, 16);
     // this.scene.fog = new THREE.FogExp2(0xdfe9f3, 0.05);
+    this.debug = new Pane();
+    this.setSettings();
     this.setCamera();
     this.setRenderer();
     this.isFullscreen = false;
-    this.enableParallax = false;
+    this.enableParallax = true;
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     // console.log(this.controls);
-    // this.controls.enabled = false;
-    this.debug = new Pane();
+    this.controls.enabled = false;
     this.cameraTarget = new THREE.Vector2();
     this.mouse = new THREE.Vector2();
     this.textureLoader = new THREE.TextureLoader();
     this.resources = new Resources();
     this.raycaster = new THREE.Raycaster();
-
-    // this.water = new Water({
-    //   renderer: this.renderer,
-    //   camera: this.camera,
-    //   scene: this.scene,
-    // });
     this.setLight();
     this.setWater();
     this.addRandomObjects();
@@ -57,10 +58,104 @@ export default class World {
     // this.setExpSky();
     this.setSky();
     // this.setPointerParticles();
-    this.setScreen();
+    // this.setScreen();
+    this.setFixedAspectScreen();
+    this.setScreenTitles();
+    // this.setProjectTitles();
     this.render();
     this.addListeners();
     this.resize();
+
+    this.debug.addButton({ title: "parallax vs orbit" }).on("click", () => {
+      const isParallaxMode = !this.enableParallax;
+      this.controls.enabled = !isParallaxMode;
+      this.enableParallax = isParallaxMode;
+      this.resize();
+      this.camera.rotation.set(0, 0, 0);
+    });
+    this.debug.addButton({ title: "toggle parallax" }).on("click", () => {
+      this.enableParallax = !this.enableParallax;
+      this.camera.rotation.set(0, 0, 0);
+    });
+  }
+
+  setSettings() {
+    this.settings = {
+      cameraZ: 90,
+      cameraY: 22,
+      cameraFOV: 45,
+      environmentSize: 200,
+      baselineFOV: 45,
+      screenPosZ: 20,
+      screenPosY: 20,
+      screenScale: 16,
+      route: "/",
+    };
+    const resizeDebug = this.debug.addFolder({ title: "resizeHelper" });
+    resizeDebug
+      .addInput(this.settings, "environmentSize", {
+        min: 20,
+        max: 400,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    resizeDebug
+      .addInput(this.settings, "cameraZ", {
+        min: -100,
+        max: 200,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    resizeDebug
+      .addInput(this.settings, "cameraY", {
+        min: -10,
+        max: 120,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    resizeDebug
+      .addInput(this.settings, "cameraFOV", {
+        min: 25,
+        max: 90,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    resizeDebug
+      .addInput(this.settings, "screenPosZ", {
+        min: -100,
+        max: 100,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    resizeDebug
+      .addInput(this.settings, "screenPosY", {
+        min: -10,
+        max: 100,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    resizeDebug
+      .addInput(this.settings, "screenScale", {
+        min: 0,
+        max: 30,
+        step: 0.1,
+      })
+      .on("change", () => this.resize());
+    const routeDebug = this.debug.addFolder({ title: "route" });
+    routeDebug
+      .addBlade({
+        view: "list",
+        label: "route",
+        options: [
+          { text: "home", value: "/" },
+          { text: "works", value: "/works" },
+          { text: "elasticMesh", value: "/works/elastic-mesh" },
+        ],
+        value: "/",
+      })
+      .on("change", ({ value }) => {
+        this.onChange(value);
+      });
   }
 
   setRenderer() {
@@ -374,91 +469,59 @@ export default class World {
   }
 
   setProjectTitles() {
-    // this.msdfTitle = new MsdfTitle(`hello ${Math.round(Math.random() * 100)}`);
-    this.projectTitles = new THREE.Group();
-    this.projectTitles.position.set(8, 8, 14);
-    this.projectTitles.rotation.y = -0.3;
-    this.scene.add(this.projectTitles);
-    this.resources.projects.forEach((project, i) => {
-      project.mesh = new MsdfTitle(project.title).mesh;
-      project.mesh.projectIndex = i;
-      const yOffset = +i * 6;
-      project.mesh.position.y = yOffset;
-      this.projectTitles.add(project.mesh);
-    });
-
-    this.activeProject = 0;
-
-    this.onOverTitle = () => {
-      const intersectsTitles = this.raycaster.intersectObjects(
-        this.resources.projects.map((project) => project.mesh)
-      );
-      if (intersectsTitles.length) {
-        const index = intersectsTitles[0].object.projectIndex;
-
-        if (this.activeProject === index) return;
-
-        this.screen.material.uniforms.uTexture.value =
-          this.resources.projects[index].texture;
-        this.screen.textureAspect = this.resources.projects[index].imageAspect;
-
-        this.resources.projects[index].mesh.material.uniforms.uColor.value.set(
-          1,
-          0,
-          0
-        );
-
-        this.resources.projects[
-          this.activeProject
-        ].mesh.material.uniforms.uColor.value.set(1, 1, 0);
-
-        this.activeProject = index;
-      }
-    };
+    this.AllTitles = new AllTitles();
   }
 
   setScreen() {
-    this.setProjectTitles();
     this.screen = new Screen();
   }
 
+  setFixedAspectScreen() {
+    this.faScreen = new FaScreen();
+  }
+
+  setScreenTitles() {
+    this.screenTitles = new ScreenTitles();
+  }
+
   fullScreenTransition() {
-    const h = this.screen.mesh.scale.y;
-    // scale screen width to match aspect ration
-    const alpha = this.camera.fov / 2;
-    const d = (0.5 * h) / Math.tan(degToRad(alpha));
+    // const h = this.screen.mesh.scale.y;
+    // // scale screen width to match aspect ration
+    // const alpha = this.camera.fov / 2;
+    // const d = (0.5 * h) / Math.tan(degToRad(alpha));
 
-    const dummy = new THREE.Object3D();
-    dummy.position
-      .copy(this.screen.mesh.position)
-      .add(this.screen.direction.clone().multiplyScalar(d));
+    // const dummy = new THREE.Object3D();
+    // dummy.position
+    //   .copy(this.screen.mesh.position)
+    //   .add(this.screen.direction.clone().multiplyScalar(d));
 
-    if (this.isFullscreen) {
-      GSAP.to(this.camera.position, {
-        ...this.cameraWrapper.originalPosition,
-        duration: 1,
-      });
+    if (!this.isFullscreen) {
+      //   GSAP.to(this.camera.position, {
+      //     ...this.cameraWrapper.originalPosition,
+      //     duration: 1,
+      //   });
       GSAP.to(this.camera.rotation, {
         x: 0,
         y: 0,
         z: 0,
         duration: 1,
-        onComplete: () => (this.enableParallax = true),
+        // onComplete: () => (this.enableParallax = true),
       });
-      this.screen.exitFullscreen();
-    } else {
+      this.screen && this.screen.enterFullscreen();
       this.enableParallax = false;
-      GSAP.to(this.camera.position, {
-        ...dummy.position,
-        duration: 1,
-      });
-      GSAP.to(this.camera.rotation, {
-        x: this.screen.mesh.rotation.x,
-        y: this.screen.mesh.rotation.y,
-        z: this.screen.mesh.rotation.z,
-        duration: 1,
-      });
-      this.screen.enterFullscreen();
+    } else {
+      this.enableParallax = true;
+      //   GSAP.to(this.camera.position, {
+      //     ...dummy.position,
+      //     duration: 1,
+      //   });
+      //   GSAP.to(this.camera.rotation, {
+      //     x: this.screen.mesh.rotation.x,
+      //     y: this.screen.mesh.rotation.y,
+      //     z: this.screen.mesh.rotation.z,
+      //     duration: 1,
+      //   });
+      this.screen && this.screen.exitFullscreen();
     }
     this.isFullscreen = !this.isFullscreen;
   }
@@ -481,6 +544,7 @@ export default class World {
     const intersect = this.raycaster.intersectObject(this.water.t);
     if (intersect.length) {
       const uv = intersect[0].uv;
+      //   console.log(uv);
       this.mouse.x = uv.x - 0.5;
       this.mouse.y = uv.y - 0.5;
       this.water.buffer.onMousemove(uv.x, uv.y);
@@ -492,33 +556,41 @@ export default class World {
       //     this.pointerLight.position
       //   );
     }
-    this.onOverTitle();
+    this.allTitles && this.AllTitles.onPointerover();
+    this.faScreen && this.faScreen.onPointermove();
   }
 
   onMousedown() {
     this.water.buffer.onMousedown();
     // this.fullScreenTransition();
+    this.faScreen && this.faScreen.onPointerdown();
   }
   onMouseup() {
     this.water.buffer.onMouseup();
   }
   onWheel(event) {
-    this.projectTitles.position.y += event.deltaY * 0.1;
-    this.onOverTitle();
+    this.allTitles && this.AllTitles.onWheel(event.deltaY);
+    this.screenTitles && this.screenTitles.onWheel(event.deltaY);
   }
 
   resize() {
     this.resolutionX = this.container.offsetWidth;
     this.resolutionY = this.container.offsetHeight;
-    const h = 2 * this.camera.position.z * Math.tan(this.camera.fov / 2);
-    const w = (h * this.resolutionX) / this.resolutionY;
-    this.viewport.set(h, w);
+    this.dominantSize = Math.max(this.resolutionX, this.resolutionY);
+    const h =
+      2 *
+      Math.abs(this.camera.position.z) *
+      Math.tan(degToRad(this.camera.fov) / 2);
+    const w = h * (this.resolutionX / this.resolutionY);
+    this.viewport.set(Math.abs(w), Math.abs(h));
     this.rendererWrapper.onResize();
     this.cameraWrapper.onResize();
     this.water.onResize();
     this.sky.onResize();
 
-    this.screen.onResize();
+    this.screen && this.screen.onResize();
+    this.faScreen && this.faScreen.onResize();
+    this.allTitles && this.AllTitles.onResize();
   }
 
   addListeners() {
@@ -527,6 +599,24 @@ export default class World {
     window.addEventListener("pointerdown", this.onMousedown.bind(this));
     window.addEventListener("pointerup", this.onMouseup.bind(this));
     window.addEventListener("wheel", this.onWheel.bind(this));
+  }
+
+  onChange(url) {
+    if (url == this.template) return;
+    this.previousTemplate = this.template;
+    this.template = url;
+    window.history.pushState({}, "", `${url}`);
+
+    if (this.previousTemplate === "/" && this.template === "/works") {
+      this.fromToRoute = "homeToWorks";
+    } else if (this.previousTemplate === "/works" && this.template === "/") {
+      this.fromToRoute = "worksToHome";
+    }
+
+    console.log(this.previousTemplate, this.template);
+
+    this.faScreen && this.faScreen.onChange();
+    this.screenTitles && this.screenTitles.onChange();
   }
 
   render() {
@@ -538,6 +628,7 @@ export default class World {
     // this.water.updateReflector();
     // this.water.buffer.updateValues(delta);
     // this.water.buffer.update();
+    this.screenTitles && this.screenTitles.update();
 
     this.updateRandonObjects();
 

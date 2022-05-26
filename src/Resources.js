@@ -11,7 +11,6 @@ export default class Resources {
         project.texture = texture;
         const data = texture.source.data;
         project.imageAspect = data.width / data.height;
-        console.log(project.imageAspect);
       });
     });
   }
