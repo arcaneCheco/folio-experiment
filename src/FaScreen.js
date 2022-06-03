@@ -131,12 +131,8 @@ export default class FaScreen {
   }
 
   onChange() {
-    const template = this.world.template;
-    if (template === "/") {
-      // this.loadingToHome();
-    }
-    // if (template.includes("/works/")) {
-    //   this.scene.remove(this.mesh);
+    // const template = this.world.template;
+    // if (template === "/") {
     // }
   }
 

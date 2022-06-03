@@ -32,7 +32,6 @@ export default class Text {
   parseFont() {
     this.glyphs = {};
     this.font.chars.forEach((d) => (this.glyphs[d.char] = d));
-    console.log(this.glyphs);
   }
 
   createGeometry() {

@@ -45,22 +45,11 @@ export default class Camera {
   }
 
   onChange() {
-    const template = this.world.template;
-    if (template.includes("/works/")) {
-      this.enableParallax = false;
-      this.instance.rotation.set(0, 0, 0);
-    }
-    if (template === "/") {
-      // this.loadingToHome();
-    }
-  }
-
-  loadingToHome() {
-    GSAP.to(this.instance, {
-      fov: 45,
-      duration: 1.5,
-      onUpdate: () => this.instance.updateProjectionMatrix(),
-    });
+    // const template = this.world.template;
+    // if (template.includes("/works/")) {
+    //   this.enableParallax = false;
+    //   this.instance.rotation.set(0, 0, 0);
+    // }
   }
 
   onPointermove() {

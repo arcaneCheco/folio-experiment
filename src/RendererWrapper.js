@@ -17,7 +17,7 @@ export default class RendererWrapper {
     this.instance.toneMapping = THREE.ACESFilmicToneMapping;
     this.instance.toneMappingExposure = 1;
     this.container.appendChild(this.instance.domElement);
-    // this.instance.autoClear = false;
+    this.instance.autoClear = false;
   }
 
   onResize() {

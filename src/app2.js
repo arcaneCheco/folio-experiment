@@ -51,7 +51,7 @@ export default class World {
     this.setSky();
     this.setScreenTitles();
     this.resources = new Resources();
-    this.resize();
+    this.onResize();
     // this.addListeners();
     this.render();
   }
@@ -63,7 +63,7 @@ export default class World {
     this.addListeners();
     this.isPreloaded = true;
     this.onChange(window.location.pathname);
-    // this.resize();
+    // this.onResize();
   }
 
   setSettings() {
@@ -77,6 +77,11 @@ export default class World {
       screenPosZ: 20,
       screenPosY: 10,
       screenScale: 16,
+      textPosX: 0,
+      textPosY: 0,
+      textPosZ: 50,
+      textScale: 200,
+      textLineSpacing: 0.2,
       route: "/",
       duringPreload: {
         cameraZ: 70,
@@ -93,49 +98,84 @@ export default class World {
         max: 400,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
     resizeDebug
       .addInput(this.settings, "cameraZ", {
         min: -100,
         max: 200,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
     resizeDebug
       .addInput(this.settings, "cameraY", {
         min: -10,
         max: 120,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
     resizeDebug
       .addInput(this.settings, "cameraFOV", {
         min: 25,
         max: 90,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
     resizeDebug
       .addInput(this.settings, "screenPosZ", {
         min: -100,
         max: 100,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
     resizeDebug
       .addInput(this.settings, "screenPosY", {
         min: -10,
         max: 100,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
     resizeDebug
       .addInput(this.settings, "screenScale", {
         min: 0,
         max: 30,
         step: 0.1,
       })
-      .on("change", () => this.resize());
+      .on("change", () => this.onResize());
+    resizeDebug
+      .addInput(this.settings, "textPosX", {
+        min: -50,
+        max: 50,
+        step: 0.1,
+      })
+      .on("change", () => this.onResize());
+    resizeDebug
+      .addInput(this.settings, "textPosY", {
+        min: -500,
+        max: 500,
+        step: 0.1,
+      })
+      .on("change", () => this.onResize());
+    resizeDebug
+      .addInput(this.settings, "textPosZ", {
+        min: -50,
+        max: 50,
+        step: 0.1,
+      })
+      .on("change", () => this.onResize());
+    resizeDebug
+      .addInput(this.settings, "textScale", {
+        min: 10,
+        max: 300,
+        step: 0.1,
+      })
+      .on("change", () => this.onResize());
+    resizeDebug
+      .addInput(this.settings, "textLineSpacing", {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      })
+      .on("change", () => this.onResize());
     const routeDebug = this.debug.addFolder({ title: "route" });
     routeDebug
       .addBlade({
@@ -274,26 +314,24 @@ export default class World {
       //     this.pointerLight.position
       //   );
     }
-    this.allTitles && this.AllTitles.onPointerover();
-    this.faScreen && this.faScreen.onPointermove();
-    this.screenTitles && this.screenTitles.onPointermove();
+    // this.faScreen && this.faScreen.onPointermove();
+    // this.screenTitles && this.screenTitles.onPointermove();
   }
 
   onMousedown() {
     this.water.buffer.onMousedown();
-    // this.fullScreenTransition();
-    this.faScreen && this.faScreen.onPointerdown();
-    this.screenTitles && this.screenTitles.onPointerdown();
+    // this.faScreen && this.faScreen.onPointerdown();
+    // this.screenTitles && this.screenTitles.onPointerdown();
   }
   onMouseup() {
     this.water.buffer.onMouseup();
   }
   onWheel(event) {
-    this.allTitles && this.AllTitles.onWheel(event.deltaY);
-    this.screenTitles && this.screenTitles.onWheel(event.deltaY);
+    // this.allTitles && this.AllTitles.onWheel(event.deltaY);
+    // this.screenTitles && this.screenTitles.onWheel(event.deltaY);
   }
 
-  resize() {
+  onResize() {
     this.resolutionX = this.container.offsetWidth;
     this.resolutionY = this.container.offsetHeight;
     // this.dominantSize = Math.max(this.resolutionX, this.resolutionY);
@@ -308,7 +346,7 @@ export default class World {
   }
 
   addListeners() {
-    window.addEventListener("resize", this.resize.bind(this));
+    window.addEventListener("resize", this.onResize.bind(this));
     window.addEventListener("pointermove", this.onMousemove.bind(this));
     window.addEventListener("pointerdown", this.onMousedown.bind(this));
     window.addEventListener("pointerup", this.onMouseup.bind(this));
@@ -321,12 +359,6 @@ export default class World {
     this.previousTemplate = this.template;
     this.template = url;
     window.history.pushState({}, "", `${url}`);
-
-    if (this.previousTemplate === "/" && this.template === "/works") {
-      this.fromToRoute = "homeToWorks";
-    } else if (this.previousTemplate === "/works" && this.template === "/") {
-      this.fromToRoute = "worksToHome";
-    }
 
     console.log(this.previousTemplate, this.template);
 
@@ -341,7 +373,7 @@ export default class World {
 
     this.faScreen && this.faScreen.update();
     this.water && this.water.update(delta);
-    // this.screenTitles && this.screenTitles.update();
+    this.screenTitles && this.screenTitles.update();
 
     // this.updateRandonObjects();
 
@@ -353,6 +385,7 @@ export default class World {
     this.time += delta;
     this.update(delta);
     this.renderer.render(this.scene, this.camera);
+    // this.screenTitles && this.screenTitles.update();
 
     window.requestAnimationFrame(this.render.bind(this));
   }
