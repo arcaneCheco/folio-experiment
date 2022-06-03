@@ -30,10 +30,27 @@ export default class Lights {
     // this.scene.add(helper4);
     this.scene.add(this.sun4);
 
-    this.ambinet = new THREE.AmbientLight(0x222222, 0.01);
+    this.ambinet = new THREE.AmbientLight(0x0040c0, 0.06);
     this.scene.add(this.ambinet);
 
     this.pointerLight = new THREE.PointLight(0xccff22, 1);
     this.scene.add(this.pointerLight);
+
+    this.debug = this.world.debug.addFolder({ title: "lights" });
+    this.debug.addInput(this.ambinet, "intensity", {
+      min: 0,
+      max: 1,
+      label: "ambient intensity",
+    });
+    this.debug.addInput(this.sun4, "intensity", {
+      min: 0,
+      max: 8,
+      label: "sun4 intensity",
+    });
+    this.debug.addInput(this.pointerLight, "intensity", {
+      min: 0,
+      max: 4,
+      label: "pointerLight intensity",
+    });
   }
 }

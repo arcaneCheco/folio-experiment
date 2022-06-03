@@ -26,7 +26,6 @@ export default class Text {
     this.parseFont();
     this.createGeometry();
     this.layout();
-    console.log(this.lines);
     this.populateBuffers();
   }
 

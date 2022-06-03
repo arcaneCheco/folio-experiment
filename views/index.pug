@@ -5,10 +5,15 @@ html(lang="en")
     meta(http-equiv="X-UA-Compatible", content="IE=edge")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
 
+    base(href="/")
+    
     title="folio"
 
     link(rel="stylesheet" type="text/css" href="styles/index.css")
 
   body 
     #canvas
+
+    script.
+      window.PROJECTS = !{JSON.stringify(projects).replace(/<\//g, "<\\/")}
     script(src="src/app2.js")

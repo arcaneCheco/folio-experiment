@@ -31,7 +31,7 @@ void main() {
 	#include <defaultnormal_vertex>
     vNormal = normalize(transformedNormal);
 
-    float mag = 0.5; // 0.1
+    float mag = 0.2; // 0.1
     float offset = 0.; // 0.02
     float heightValue = texture2D( u_buffer, uv + offset).x * mag - mag;
     float l = 2.;

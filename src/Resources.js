@@ -1,17 +1,34 @@
 import World from "./app2";
-import { projects } from "./Assets";
+import EventEmitter from "events";
 
-export default class Resources {
+export default class Resources extends EventEmitter {
   constructor() {
+    super();
     this.world = new World();
     this.textureLoader = this.world.textureLoader;
-    this.projects = projects;
-    this.projects.forEach((project) => {
-      this.textureLoader.load(project.media, (texture) => {
+    this.projectsData = window.PROJECTS;
+    this.numAssets = this.projectsData.length;
+    this.loadedAssets = 0;
+    this.load();
+  }
+
+  load() {
+    this.projectsData.forEach((project) => {
+      this.textureLoader.load(project.link, (texture) => {
         project.texture = texture;
-        const data = texture.source.data;
-        project.imageAspect = data.width / data.height;
+        this.onAssetLoaded();
       });
     });
+  }
+
+  onAssetLoaded() {
+    this.loadedAssets++;
+    const progress = this.loadedAssets / this.numAssets;
+    console.log(progress);
+    if (progress === 1) {
+      window.setTimeout(() => {
+        this.emit("finsished loading");
+      }, 1000);
+    }
   }
 }

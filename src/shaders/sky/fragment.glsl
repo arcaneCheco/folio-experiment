@@ -149,4 +149,6 @@ void main() {
     sundisk = smoothstep(moonSize, moonSize * 1.005, cosTheta);
     gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3(1.), sundisk - 0.);
     gl_FragColor += 0.2;
+
+    gl_FragColor = vec4(sky, 1.);
 }

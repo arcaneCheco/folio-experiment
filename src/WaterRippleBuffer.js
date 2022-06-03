@@ -40,7 +40,7 @@ export default class WaterRippleBuffer {
         this.uniform.value = this.mask.read.texture;
       },
     };
-    this.setRenderTargets(128);
+    this.setRenderTargets(256);
     this.setMesh();
     this.resize();
   }

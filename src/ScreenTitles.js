@@ -4,6 +4,7 @@ import MsdfTitle from "./MsdfTitle";
 import TextGeometryOGL from "./text/TextGeometryOGL";
 import font from "./text/Audiowide-Regular.json";
 import Text from "./text/Text";
+import { degToRad, clamp } from "three/src/math/MathUtils";
 
 export default class ScreenTitles {
   constructor() {
@@ -11,13 +12,39 @@ export default class ScreenTitles {
     this.scene = this.world.scene;
     this.textureLoader = this.world.textureLoader;
     this.renderer = this.world.renderer;
+    this.raycaster = this.world.raycaster;
+    this.activeProject = 0;
+    this.hover = false;
+    this.scroll = {
+      target: 0,
+      current: 0,
+    };
+    this.onResize = this.onResizeLoading;
 
+    this.init();
     // this.setText();
     // this.setGeometry();
     // this.setMaterial();
+    // this.onResize();
+  }
+
+  show() {
+    this.scene.add(this.group);
+  }
+
+  hide() {
+    this.scene.remove(this.group);
+  }
+
+  init() {
     this.setGroup();
+  }
+
+  onPreloaded() {
+    this.projectsData = this.world.resources.projectsData;
     this.setMesh();
-    this.onResize();
+    this.setTouchPlanes();
+    this.onResize = this.onResizeLoaded;
   }
 
   show() {
@@ -36,8 +63,6 @@ export default class ScreenTitles {
       lineWidth: 1,
       lineHeight: 0.9,
     });
-    console.log(this.text.width);
-    console.log(this.text.height);
   }
 
   setGeometry(text) {
@@ -103,16 +128,53 @@ export default class ScreenTitles {
   }
 
   setMesh() {
+    console.log(this.world.resources);
     this.titles = [];
-    this.titles.push(new MsdfTitle("hello world"));
-    this.titles.push(new MsdfTitle("infinite tunnel"));
-    this.titles.push(new MsdfTitle("mandelbrot explorer"));
-    this.titles.push(new MsdfTitle("elastic mesh"));
-
-    this.titles.forEach((title) => {
-      const mesh = title.mesh;
-      this.group.add(mesh);
+    this.projectsData.map((project) => {
+      project.msdfTitle = new MsdfTitle(project.title);
+      this.group.add(project.msdfTitle.mesh);
     });
+  }
+
+  setTouchPlanes() {
+    this.touchPlanes = [];
+    const g = new THREE.PlaneGeometry(1, 1);
+    const m = new THREE.MeshBasicMaterial({ visible: false });
+    const mesh = new THREE.Mesh(g, m);
+    this.projectsData.forEach((project) => {
+      const touchMesh = mesh.clone();
+      touchMesh.index = project.index;
+      this.touchPlanes.push(touchMesh);
+      touchMesh.position.y -=
+        0.5 * (project.msdfTitle.geometry.text.height - 1); // assuming lineheight and size are both one in text
+      touchMesh.scale.set(
+        project.msdfTitle.geometry.text.width,
+        project.msdfTitle.geometry.text.height,
+        1
+      );
+      project.msdfTitle.mesh.add(touchMesh);
+    });
+  }
+
+  onPointermove() {
+    const intersects = this.raycaster.intersectObjects(this.touchPlanes);
+    if (intersects.length) {
+      this.hover = true;
+      const hit = intersects[0];
+      this.activeProject = hit.object.index;
+    } else {
+      this.hover = false;
+    }
+  }
+
+  onPointerdown() {
+    if (this.hover) {
+      this.world.onChange(
+        this.projectsData.find(
+          (project) => project.index === this.activeProject
+        ).path
+      );
+    }
   }
 
   onChange() {
@@ -123,7 +185,11 @@ export default class ScreenTitles {
     }
   }
 
-  onResize() {
+  onResizeLoading() {}
+
+  onResize() {}
+
+  onResizeLoaded() {
     this.group.position.set(0, 13, 55);
     const s = 6;
     this.group.scale.set(s, s, 1);
@@ -131,22 +197,34 @@ export default class ScreenTitles {
     let totalWidth = 0;
     let spacing = 0.5;
 
-    this.titles.forEach((title, i) => {
-      const mesh = title.mesh;
-      const width = title.geometry.text.width;
+    this.projectsData.forEach((project) => {
+      const mesh = project.msdfTitle.mesh;
+      const width = project.msdfTitle.geometry.text.width;
       mesh.position.x = totalWidth + width / 2;
       totalWidth += width + spacing;
     });
-    this.titles.forEach((title, i) => {
-      title.mesh.position.x -= totalWidth / 2;
+    this.projectsData.forEach((project) => {
+      project.msdfTitle.mesh.position.x -= totalWidth / 2;
+      project.msdfTitle.mesh.initialPosition =
+        project.msdfTitle.mesh.position.x;
     });
-    // this.group.position.x -= (s * totalWidth) / 2;
     this.totalWidth = totalWidth;
+
+    // const distanceToCam = this.world.camera.position.z - this.group.position.z;
+    // const h2 = Math.tan(degToRad(this.world.camera.fov / 2)) * distanceToCam;
+    // const ratio = this.world.resolutionY / (2 * h2);
+    // this.screenTotalWidth = ratio * this.totalWidth * s;
+    // console.log(this.screenTotalWidth);
   }
 
   onWheel(delta) {
+    this.scroll.target = clamp(
+      this.scroll.target + delta * 0.1,
+      -this.totalWidth / 2,
+      this.totalWidth / 2
+    );
     this.group.children.forEach((mesh) => {
-      mesh.position.x += delta * 0.1;
+      mesh.position.x = mesh.initialPosition + this.scroll.target;
     });
   }
 
