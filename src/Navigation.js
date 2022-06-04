@@ -19,5 +19,33 @@ export default class Navigation {
         this.scroll.target = target.scrollTarget;
       };
     }
+    this.homeButton = document.querySelector(".navigation__home");
+    this.aboutButton = document.querySelector(".navigation__about");
+    this.homeButton.onclick = () => this.world.onChange({ url: "/" });
+    this.aboutButton.onclick = () => this.world.onChange({ url: "/about" });
+
+    this.setDebug();
+  }
+
+  setDebug() {
+    this.debug = this.world.debug.addFolder({
+      title: "navigation",
+      expanded: true,
+    });
+    this.debug
+      .addBlade({
+        view: "list",
+        label: "route",
+        options: [
+          { text: "home", value: "/" },
+          { text: "projects", value: "/projects" },
+          { text: "elasticMesh", value: "/projects/elastic-mesh" },
+          { text: "about", value: "/about" },
+        ],
+        value: "",
+      })
+      .on("change", ({ value }) => {
+        this.world.onChange({ url: value });
+      });
   }
 }

@@ -19,18 +19,10 @@ export default class ScreenTitles {
       target: 0,
       current: 0,
       limit: 0,
-      lerp: 0.5,
+      lerp: 0.2,
     };
 
     this.init();
-  }
-
-  show() {
-    this.scene.add(this.group);
-  }
-
-  hide() {
-    this.scene.remove(this.group);
   }
 
   init() {
@@ -71,7 +63,7 @@ export default class ScreenTitles {
     this.setMesh();
     this.setTouchPlanes();
     this.onResize();
-    this.show();
+    // this.show();
 
     this.debug
       .addBlade({
@@ -159,11 +151,11 @@ export default class ScreenTitles {
 
   onPointerdown() {
     if (this.hover) {
-      this.world.onChange(
-        this.projectsData.find(
+      this.world.onChange({
+        url: this.projectsData.find(
           (project) => project.index === this.activeProject
-        ).path
-      );
+        ).path,
+      });
     }
   }
 
@@ -244,5 +236,27 @@ export default class ScreenTitles {
   update() {
     this.updateScrollPosition();
     this.world.renderer.render(this.scene, this.camera);
+  }
+
+  // nvagitation stuff
+
+  show() {
+    this.scene.add(this.group);
+  }
+
+  hide() {
+    this.scene.remove(this.group);
+  }
+
+  toHome() {
+    this.hide();
+  }
+
+  toAbout() {
+    this.hide();
+  }
+
+  toProjects() {
+    this.show();
   }
 }

@@ -10,7 +10,6 @@ import Resources from "./Resources";
 import Lights from "./Lights";
 import Camera from "./Camera";
 import RendererWrapper from "./RendererWrapper";
-import AllTitles from "./AllTitles";
 import FaScreen from "./FaScreen";
 import ScreenTitles from "./ScreenTitles";
 import ProjectDetail from "./ProjectDetail";
@@ -67,7 +66,7 @@ export default class World {
     this.screenTitles && this.screenTitles.onPreloaded();
     this.setNavigation();
     this.addListeners();
-    this.onChange(window.location.pathname);
+    this.onChange({ url: window.location.pathname });
     // this.onResize();
   }
 
@@ -144,21 +143,6 @@ export default class World {
         step: 0.1,
       })
       .on("change", () => this.onResize());
-    const routeDebug = this.debug.addFolder({ title: "route" });
-    routeDebug
-      .addBlade({
-        view: "list",
-        label: "route",
-        options: [
-          { text: "home", value: "/" },
-          { text: "works", value: "/works" },
-          { text: "elasticMesh", value: "/works/elastic-mesh" },
-        ],
-        value: this.template,
-      })
-      .on("change", ({ value }) => {
-        this.onChange(value);
-      });
   }
 
   setRenderer() {
@@ -279,9 +263,6 @@ export default class World {
       const pos = intersect[0].point;
       this.lights.pointerLight.position.copy(pos);
       this.lights.pointerLight.position.z += 0.5;
-      //   this.ppMesh.material.uniforms.uPointer.value.copy(
-      //     this.pointerLight.position
-      //   );
     }
     // this.faScreen && this.faScreen.onPointermove();
     this.screenTitles && this.screenTitles.onPointermove();
@@ -296,7 +277,6 @@ export default class World {
     this.water.buffer.onMouseup();
   }
   onWheel(event) {
-    // this.allTitles && this.AllTitles.onWheel(event.deltaY);
     this.screenTitles && this.screenTitles.onWheel(event.deltaY);
   }
 
@@ -320,21 +300,33 @@ export default class World {
     window.addEventListener("pointerdown", this.onMousedown.bind(this));
     window.addEventListener("pointerup", this.onMouseup.bind(this));
     window.addEventListener("wheel", this.onWheel.bind(this));
+    window.addEventListener("popstate", this.onPopState.bind(this));
   }
 
-  onChange(url) {
+  onPopState() {
+    this.onChange({
+      url: window.location.pathname,
+      push: false,
+    });
+  }
+
+  onChange({ url, push = true }) {
     if (url == this.template) return;
 
     this.previousTemplate = this.template;
     this.template = url;
-    window.history.pushState({}, "", `${url}`);
 
-    console.log(this.previousTemplate, this.template);
+    if (push) {
+      window.history.pushState({}, "", `${url}`);
+    }
 
-    this.cameraWrapper.onChange();
-    this.faScreen && this.faScreen.onChange();
-    this.screenTitles && this.screenTitles.onChange();
-    this.projectDetail && this.projectDetail.onChange();
+    if (this.template === "/") {
+      this.screenTitles.toHome();
+    } else if (this.template === "/about") {
+      this.screenTitles.toAbout();
+    } else if (this.template === "/projects") {
+      this.screenTitles.toProjects();
+    }
   }
 
   update(delta) {

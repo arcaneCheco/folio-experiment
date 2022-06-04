@@ -120,12 +120,12 @@ export default class FaScreen {
       const currentRoute = this.world.template;
       console.log(currentRoute);
       if (currentRoute === "/") {
-        this.world.onChange("/works");
+        this.world.onChange({ url: "/works" });
       } else if (currentRoute === "/works") {
         const activeProject = this.world.screenTitles.activeProject;
-        this.world.onChange(
-          this.routes.find(({ index }) => index === activeProject).path
-        );
+        this.world.onChange({
+          url: this.routes.find(({ index }) => index === activeProject).path,
+        });
       }
     }
   }

@@ -16,11 +16,14 @@ app.use(express.static(`${__dirname}/dist`));
 app.set("view engine", "pug");
 app.set("index", `${__dirname}/views`);
 
-app.get(["/", "/works", "/works/:project"], async (req, res) => {
-  res.render("index", {
-    projects: data.projects,
-  });
-});
+app.get(
+  ["/", "/projects", "/projects/:project", "/about"],
+  async (req, res) => {
+    res.render("index", {
+      projects: data.projects,
+    });
+  }
+);
 
 app.listen(PORT, () => {
   console.log(`Listening at http://localhost:${PORT}`);
