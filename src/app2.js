@@ -14,7 +14,7 @@ import AllTitles from "./AllTitles";
 import FaScreen from "./FaScreen";
 import ScreenTitles from "./ScreenTitles";
 import ProjectDetail from "./ProjectDetail";
-import Physics from "./Physics";
+import Navigation from "./Navigation";
 
 export default class World {
   static instance;
@@ -37,7 +37,11 @@ export default class World {
     this.mouse = new THREE.Vector2();
     this.textureLoader = new THREE.TextureLoader();
     this.isPreloaded = false;
-    this.debug = new Pane();
+    this.pane = new Pane();
+    this.pane
+      .addButton({ title: "show/hide" })
+      .on("click", () => (this.debug.hidden = !this.debug.hidden));
+    this.debug = this.pane.addFolder({ title: "debug", hidden: true });
     this.raycaster = new THREE.Raycaster();
     this.setSettings();
 
@@ -57,11 +61,12 @@ export default class World {
   }
 
   onPreloaded() {
+    this.isPreloaded = true;
     this.cameraWrapper.onPreloaded();
     this.faScreen && this.faScreen.onPreloaded();
     this.screenTitles && this.screenTitles.onPreloaded();
+    this.setNavigation();
     this.addListeners();
-    this.isPreloaded = true;
     this.onChange(window.location.pathname);
     // this.onResize();
   }
@@ -77,11 +82,6 @@ export default class World {
       screenPosZ: 20,
       screenPosY: 10,
       screenScale: 16,
-      textPosX: 0,
-      textPosY: 0,
-      textPosZ: 50,
-      textScale: 200,
-      textLineSpacing: 0.2,
       route: "/",
       duringPreload: {
         cameraZ: 70,
@@ -91,7 +91,10 @@ export default class World {
         screenPosY: 10,
       },
     };
-    const resizeDebug = this.debug.addFolder({ title: "resizeHelper" });
+    const resizeDebug = this.debug.addFolder({
+      title: "resizeHelper",
+      expanded: false,
+    });
     resizeDebug
       .addInput(this.settings, "environmentSize", {
         min: 20,
@@ -141,41 +144,6 @@ export default class World {
         step: 0.1,
       })
       .on("change", () => this.onResize());
-    resizeDebug
-      .addInput(this.settings, "textPosX", {
-        min: -50,
-        max: 50,
-        step: 0.1,
-      })
-      .on("change", () => this.onResize());
-    resizeDebug
-      .addInput(this.settings, "textPosY", {
-        min: -500,
-        max: 500,
-        step: 0.1,
-      })
-      .on("change", () => this.onResize());
-    resizeDebug
-      .addInput(this.settings, "textPosZ", {
-        min: -50,
-        max: 50,
-        step: 0.1,
-      })
-      .on("change", () => this.onResize());
-    resizeDebug
-      .addInput(this.settings, "textScale", {
-        min: 10,
-        max: 300,
-        step: 0.1,
-      })
-      .on("change", () => this.onResize());
-    resizeDebug
-      .addInput(this.settings, "textLineSpacing", {
-        min: 0,
-        max: 1,
-        step: 0.01,
-      })
-      .on("change", () => this.onResize());
     const routeDebug = this.debug.addFolder({ title: "route" });
     routeDebug
       .addBlade({
@@ -205,6 +173,10 @@ export default class World {
 
   setLight() {
     this.lights = new Lights();
+  }
+
+  setNavigation() {
+    this.navigation = new Navigation();
   }
 
   setProjectDetail() {
@@ -302,9 +274,6 @@ export default class World {
     const intersect = this.raycaster.intersectObject(this.water.t);
     if (intersect.length) {
       const uv = intersect[0].uv;
-      //   console.log(uv);
-      this.mouse.x = uv.x - 0.5;
-      this.mouse.y = uv.y - 0.5;
       this.water.buffer.onMousemove(uv.x, uv.y);
 
       const pos = intersect[0].point;
@@ -315,7 +284,7 @@ export default class World {
       //   );
     }
     // this.faScreen && this.faScreen.onPointermove();
-    // this.screenTitles && this.screenTitles.onPointermove();
+    this.screenTitles && this.screenTitles.onPointermove();
   }
 
   onMousedown() {
@@ -328,7 +297,7 @@ export default class World {
   }
   onWheel(event) {
     // this.allTitles && this.AllTitles.onWheel(event.deltaY);
-    // this.screenTitles && this.screenTitles.onWheel(event.deltaY);
+    this.screenTitles && this.screenTitles.onWheel(event.deltaY);
   }
 
   onResize() {

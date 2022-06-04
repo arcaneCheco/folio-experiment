@@ -19,8 +19,15 @@ export default class Camera {
     );
     this.controls.enabled = false;
 
+    this.parallaxSettings = {
+      lerp: 0.1,
+      magX: 0.2,
+      magY: 0.4,
+    };
+
     this.cameraDebugFolder = this.world.debug.addFolder({
       title: "camera controls",
+      expanded: false,
     });
     this.cameraDebugFolder
       .addButton({ title: "parallax vs orbit" })
@@ -37,10 +44,28 @@ export default class Camera {
         this.enableParallax = !this.enableParallax;
         this.instance.rotation.set(0, 0, 0);
       });
+    this.cameraDebugFolder.addInput(this.parallaxSettings, "lerp", {
+      label: "lerp factor",
+      min: 0.001,
+      max: 1,
+      step: 0.001,
+    });
+    this.cameraDebugFolder.addInput(this.parallaxSettings, "magX", {
+      label: "parallax X",
+      min: 0.01,
+      max: 1,
+      step: 0.001,
+    });
+    this.cameraDebugFolder.addInput(this.parallaxSettings, "magY", {
+      label: "parallax Y",
+      min: 0.01,
+      max: 1,
+      step: 0.001,
+    });
   }
 
   onPreloaded() {
-    this.enableParallax = true;
+    // this.enableParallax = true;
     this.onResize = this.onResizeLoaded;
   }
 
@@ -54,16 +79,18 @@ export default class Camera {
 
   onPointermove() {
     if (!this.enableParallax) return;
-    this.lookAtTarget.y = -this.world.mouse.x * 0.2;
-    this.lookAtTarget.x = this.world.mouse.y * 0.4;
+    this.lookAtTarget.y = -this.world.mouse.x * this.parallaxSettings.magX;
+    this.lookAtTarget.x = this.world.mouse.y * this.parallaxSettings.magY;
   }
 
   update() {
     if (this.enableParallax) {
       this.instance.rotation.x +=
-        (this.lookAtTarget.x - this.instance.rotation.x) * 0.1;
+        (this.lookAtTarget.x - this.instance.rotation.x) *
+        this.parallaxSettings.lerp;
       this.instance.rotation.y +=
-        (this.lookAtTarget.y - this.instance.rotation.y) * 0.1;
+        (this.lookAtTarget.y - this.instance.rotation.y) *
+        this.parallaxSettings.lerp;
     }
   }
 

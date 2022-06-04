@@ -4,7 +4,7 @@ import MsdfTitle from "./MsdfTitle";
 import TextGeometryOGL from "./text/TextGeometryOGL";
 import font from "./text/Audiowide-Regular.json";
 import Text from "./text/Text";
-import { degToRad, clamp } from "three/src/math/MathUtils";
+import { degToRad, clamp, lerp } from "three/src/math/MathUtils";
 
 export default class ScreenTitles {
   constructor() {
@@ -18,8 +18,9 @@ export default class ScreenTitles {
     this.scroll = {
       target: 0,
       current: 0,
+      limit: 0,
+      lerp: 0.5,
     };
-    this.onResize = this.onResizeLoading;
 
     this.init();
   }
@@ -35,6 +36,18 @@ export default class ScreenTitles {
   init() {
     this.setGroup();
     this.setCamera();
+    this.setDebug();
+  }
+
+  setDebug() {
+    this.debug = this.world.debug.addFolder({ title: "project titles" });
+    this.settings = {
+      spacing: 0.6,
+      scale: 0.75,
+      marginTop: 0.5,
+      marginBottom: 0.5,
+      marginLeft: 0.2,
+    };
   }
 
   setCamera() {
@@ -56,78 +69,25 @@ export default class ScreenTitles {
   onPreloaded() {
     this.projectsData = this.world.resources.projectsData;
     this.setMesh();
-    // this.setTouchPlanes();
-    this.onResize = this.onResizeLoaded;
+    this.setTouchPlanes();
     this.onResize();
     this.show();
-  }
 
-  setText() {
-    this.text = new Text({
-      font,
-      text: "hello world",
-      align: "center",
-      letterSpacing: -0,
-      lineWidth: 1,
-      lineHeight: 0.9,
-    });
-  }
-
-  setGeometry(text) {
-    this.geometry = new THREE.BufferGeometry();
-    this.geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(text.buffers["position"], 3)
-    );
-    this.geometry.setAttribute(
-      "uv",
-      new THREE.BufferAttribute(text.buffers["uv"], 2)
-    );
-    this.geometry.setAttribute(
-      "id",
-      new THREE.BufferAttribute(text.buffers["id"], 1)
-    );
-    this.geometry.setIndex(new THREE.BufferAttribute(text.buffers["index"], 1));
-  }
-
-  setMaterial() {
-    this.material = new THREE.ShaderMaterial({
-      vertexShader: `
-        varying vec2 vUv;
-
-        void main() {
-            vec3 newPos = position;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.);
-            // gl_Position = vec4(position, 1.);
-            vUv = uv;
-        }
-        `,
-      fragmentShader: `
-        uniform sampler2D uMap;
-        uniform vec3 uColor;
-
-        varying vec2 vUv;
-
-        float median(float r, float g, float b) {
-            return max(min(r, g), min(max(r, g), b));
-        }
-
-        void main() {
-            vec3 font = texture2D(uMap, vUv).rgb;
-            float sigDist = median(font.r, font.g, font.b) - 0.5;
-            float fill = clamp(sigDist/fwidth(sigDist) + 0.5, 0.0, 1.0);
-            gl_FragColor = vec4(uColor, fill);
-            gl_FragColor = vec4(vec3(vUv, 1.), fill);
-            if (gl_FragColor.a < 0.001) discard;
-        }
-        `,
-      side: THREE.DoubleSide,
-      transparent: true,
-      uniforms: {
-        uMap: { value: this.textureLoader.load("Audiowide-Regular.ttf.png") },
-        uColor: { value: new THREE.Vector3(1, 1, 0) },
-      },
-    });
+    this.debug
+      .addBlade({
+        view: "list",
+        label: "scroll To",
+        options: this.titles.map((mesh) => {
+          return {
+            text: String(mesh.userData.index),
+            value: mesh.scrollPosition,
+          };
+        }),
+        value: null,
+      })
+      .on("change", ({ value }) => {
+        this.scroll.target = value;
+      });
   }
 
   setGroup() {
@@ -153,22 +113,40 @@ export default class ScreenTitles {
     const g = new THREE.PlaneGeometry(1, 1);
     const m = new THREE.MeshBasicMaterial({ visible: false });
     const mesh = new THREE.Mesh(g, m);
-    this.projectsData.forEach((project) => {
+    this.titles.forEach((titleMesh) => {
       const touchMesh = mesh.clone();
-      touchMesh.index = project.index;
-      this.touchPlanes.push(touchMesh);
-      touchMesh.position.y -=
-        0.5 * (project.msdfTitle.geometry.text.height - 1); // assuming lineheight and size are both one in text
+      touchMesh.position.x += titleMesh.userData.textWidth * 0.5;
+      touchMesh.position.y -= 0.5 * (titleMesh.userData.textHeight - 1);
+      titleMesh.add(touchMesh);
       touchMesh.scale.set(
-        project.msdfTitle.geometry.text.width,
-        project.msdfTitle.geometry.text.height,
+        titleMesh.userData.textWidth,
+        titleMesh.userData.textHeight,
         1
       );
-      project.msdfTitle.mesh.add(touchMesh);
+      touchMesh.index = titleMesh.userData.index;
+      this.touchPlanes.push(touchMesh);
     });
   }
 
   onPointermove() {
+    this.raycaster.setFromCamera(this.world.mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.touchPlanes);
+    if (intersects.length) {
+      this.hover = true;
+      const hit = intersects[0];
+      this.activeProject = hit.object.index;
+    } else {
+      this.hover = false;
+    }
+  }
+
+  onWheel(delta) {
+    this.scroll.target = clamp(
+      this.scroll.target + delta * 0.5,
+      0,
+      this.scroll.limit
+    );
+
     const intersects = this.raycaster.intersectObjects(this.touchPlanes);
     if (intersects.length) {
       this.hover = true;
@@ -189,49 +167,82 @@ export default class ScreenTitles {
     }
   }
 
-  onChange() {}
+  onChange() {
+    // const template = this.world.template;
+    // if (template === "/works") {
+    //   this.show();
+    // } else {
+    //   this.hide();
+    // }
+  }
 
-  onResizeLoading() {}
+  onResize() {
+    if (!this.world.isPreloaded) return;
 
-  onResize() {}
-
-  onResizeLoaded() {
     // using ortho camera
     this.resolutionX = this.world.resolutionX;
     this.resolutionY = this.world.resolutionY;
     this.halfWidth = this.resolutionX / 2;
     this.halfHeight = this.resolutionY / 2;
+
+    // resize camera
     this.camera.left = -this.halfWidth;
     this.camera.right = this.halfWidth;
     this.camera.top = this.halfHeight;
     this.camera.bottom = -this.halfHeight;
     this.camera.updateProjectionMatrix();
-    const scale = this.world.settings.textScale;
-    const spacing = this.world.settings.textLineSpacing;
-    const textHeight = 1;
-    this.group.position.x = -this.halfWidth;
-    this.group.position.y = this.halfHeight - 0.5 * scale * textHeight;
-    this.group.scale.set(scale, scale, 1);
+
+    // resize group
+    const spacing = this.settings.spacing;
+    const lineheight = 1;
+    const linewidth = 8;
+    this.scale = (this.resolutionX * this.settings.scale) / linewidth;
+    this.group.position.x =
+      -this.halfWidth + this.settings.marginLeft * this.scale;
+    this.group.initialPosition =
+      this.halfHeight - 0.5 * this.scale * lineheight;
+    this.group.position.y = this.group.initialPosition;
+    this.group.scale.set(this.scale, this.scale, 1);
+
+    // set title positions inside group
+    this.totalHeight = this.settings.marginTop;
+    this.titles.map((mesh, index) => {
+      // assume loop-index is the same as mesh-index
+      mesh.initialPosition = -this.totalHeight;
+      mesh.position.y = mesh.initialPosition;
+
+      let offset = mesh.userData.textHeight;
+      if (index < this.nTitles - 1) {
+        offset += spacing;
+      } else {
+        offset += this.settings.marginBottom;
+      }
+      this.totalHeight += offset;
+    });
+
+    this.scroll.limit = this.totalHeight * this.scale - this.resolutionY;
 
     this.titles.map((mesh) => {
-      const initialHeight = mesh.userData.index * (textHeight + spacing);
-      console.log(initialHeight);
-      mesh.position.y = -initialHeight;
+      // set scroll-position
+      let target = mesh.initialPosition - mesh.userData.textHeight * 0.5;
+      target = Math.abs(target) * this.scale - this.resolutionY / 2;
+      target = clamp(target, 0, this.scroll.limit);
+      mesh.scrollPosition = target;
     });
   }
 
-  onWheel(delta) {
-    this.scroll.target = clamp(
-      this.scroll.target + delta * 0.1,
-      -this.totalWidth / 2,
-      this.totalWidth / 2
+  updateScrollPosition() {
+    if (Math.abs(this.scroll.target - this.scroll.current) < 1) return;
+    this.scroll.current = lerp(
+      this.scroll.current,
+      this.scroll.target,
+      this.scroll.lerp
     );
-    this.group.children.forEach((mesh) => {
-      mesh.position.x = mesh.initialPosition + this.scroll.target;
-    });
+    this.group.position.y = this.group.initialPosition + this.scroll.current;
   }
 
   update() {
+    this.updateScrollPosition();
     this.world.renderer.render(this.scene, this.camera);
   }
 }

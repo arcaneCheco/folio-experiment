@@ -36,7 +36,10 @@ export default class Lights {
     this.pointerLight = new THREE.PointLight(0xccff22, 1);
     this.scene.add(this.pointerLight);
 
-    this.debug = this.world.debug.addFolder({ title: "lights" });
+    this.debug = this.world.debug.addFolder({
+      title: "lights",
+      expanded: false,
+    });
     this.debug.addInput(this.ambinet, "intensity", {
       min: 0,
       max: 1,

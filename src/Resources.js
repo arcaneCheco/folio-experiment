@@ -28,7 +28,7 @@ export default class Resources extends EventEmitter {
     if (progress === 1) {
       window.setTimeout(() => {
         this.emit("finsished loading");
-      }, 1000);
+      }, 500);
     }
   }
 }
