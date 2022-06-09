@@ -49,8 +49,6 @@ export default class ReflectionBuffer {
   }
 
   onResize(s) {
-    // this.reflector.scale.setScalar(this.world.dominantSize);
-
     this.reflector.scale.setScalar(s);
   }
 }

@@ -1,0 +1,22 @@
+.overlayTop {
+  position: absolute;
+  width: 100%;
+  height: 20%;
+  background: rgb(201, 113, 100);
+  opacity: 0.5;
+  top: 0;
+  z-index: 1;
+  cursor: pointer;
+  visibility: hidden;
+}
+.overlayBottom {
+  position: absolute;
+  width: 100%;
+  height: 20%;
+  background: rgb(201, 113, 100);
+  opacity: 0.5;
+  bottom: 0;
+  z-index: 1;
+  cursor: pointer;
+  visibility: hidden;
+}

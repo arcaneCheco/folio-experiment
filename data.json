@@ -4,25 +4,25 @@
       "title": "hello world",
       "link": "projects/army.jpeg",
       "index": 0,
-      "path": "/works/hello-world"
+      "path": "/projects/hello-world"
     },
     {
       "title": "infinite tuppel",
       "link": "projects/blue-moon.png",
       "index": 1,
-      "path": "/works/infinite-tunnel"
+      "path": "/projects/infinite-tunnel"
     },
     {
       "title": "mandelbrot explorer",
       "link": "projects/kitten.png",
       "index": 2,
-      "path": "/works/mandelbrot-explorer"
+      "path": "/projects/mandelbrot-explorer"
     },
     {
       "title": "elastic mesh",
       "link": "projects/piplup-thumb.png",
       "index": 3,
-      "path": "/works/elastic-mesh"
+      "path": "/projects/elastic-mesh"
     }
   ]
 }

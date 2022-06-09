@@ -10,6 +10,10 @@ export default class Resources extends EventEmitter {
     this.numAssets = this.projectsData.length;
     this.loadedAssets = 0;
     this.load();
+
+    this.world.debug
+      .addButton({ title: "finish loading" })
+      .on("click", () => this.emit("finsished loading"));
   }
 
   load() {
@@ -26,9 +30,9 @@ export default class Resources extends EventEmitter {
     const progress = this.loadedAssets / this.numAssets;
     console.log(progress);
     if (progress === 1) {
-      window.setTimeout(() => {
-        this.emit("finsished loading");
-      }, 500);
+      // window.setTimeout(() => {
+      //   this.emit("finsished loading");
+      // }, 500);
     }
   }
 }

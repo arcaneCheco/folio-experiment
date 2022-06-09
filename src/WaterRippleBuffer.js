@@ -90,11 +90,11 @@ export default class WaterRippleBuffer {
     this.scene.add(this.mesh);
   }
 
-  onMousemove(x, y) {
+  onPointermove(uv) {
     this.needsUpdate = true;
     this.uniforms.u_mouse.value.z = 1;
-    this.mouse.x = x;
-    this.mouse.y = y;
+    this.mouse.x = uv.x;
+    this.mouse.y = uv.y;
   }
 
   onMousedown() {
@@ -131,9 +131,11 @@ export default class WaterRippleBuffer {
   }
 
   update() {
+    const currentRenderTarget = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(this.mask.write);
     this.renderer.render(this.scene, this.camera);
-    this.renderer.setRenderTarget(null);
+    this.renderer.setRenderTarget(currentRenderTarget);
+    this.renderer.clear();
     this.mask.swap();
     this.uniforms.u_mouse.value.z = 0;
   }

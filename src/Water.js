@@ -55,8 +55,8 @@ export class Water {
     this.material.lights = true;
 
     // Material attributes from THREE.MeshPhongMaterial
-    this.material.color = new THREE.Color(0xff0000);
-    this.material.color = new THREE.Color(0x0040c0);
+    // this.material.color = new THREE.Color(0xff0000);
+    // this.material.color = new THREE.Color(0x0040c0);
     this.material.color = new THREE.Color(0xffffff);
     this.material.specular = new THREE.Color(0x11ffff);
     this.material.shininess = 50;
@@ -105,6 +105,10 @@ export class Water {
     this.t.rotation.x = -Math.PI / 2;
     this.t.position.copy(this.waterPosition);
     this.scene.add(this.t);
+  }
+
+  onPointermove(uv) {
+    this.buffer.onPointermove(uv);
   }
 
   onResize() {

@@ -1,0 +1,23 @@
+.projectDetail {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 1;
+  visibility: hidden;
+}
+.projectDetail__wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.projectDetail__box {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 80%;
+  background-color: red;
+}
+
+.projectDetail__box__content {
+  font-size: x-large;
+}

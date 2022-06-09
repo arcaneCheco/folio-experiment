@@ -13,6 +13,8 @@ export default class ScreenTitles {
     this.textureLoader = this.world.textureLoader;
     this.renderer = this.world.renderer;
     this.raycaster = this.world.raycaster;
+    this.overlayTop = document.querySelector(".overlayTop");
+    this.overlayBottom = document.querySelector(".overlayBottom");
     this.activeProject = 0;
     this.hover = false;
     this.scroll = {
@@ -29,6 +31,7 @@ export default class ScreenTitles {
     this.setGroup();
     this.setCamera();
     this.setDebug();
+    this.tempSetup();
   }
 
   setDebug() {
@@ -44,6 +47,7 @@ export default class ScreenTitles {
 
   setCamera() {
     this.scene = new THREE.Scene();
+    // this.scene = this.world.scene;
     const width = this.world.resolutionX;
     const height = this.world.resolutionY;
     console.log(width, height);
@@ -88,8 +92,13 @@ export default class ScreenTitles {
 
   setMesh() {
     this.titles = [];
+    this.materials = [];
+    this.paths = [];
     this.projectsData.map((project) => {
+      console.log(project);
+      this.paths.push(project.path);
       const msdfObject = new MsdfTitle(project.title);
+      this.materials.push(msdfObject.material);
       const mesh = msdfObject.mesh;
       mesh.userData.index = project.index;
       mesh.userData.textWidth = msdfObject.geometry.text.width;
@@ -98,6 +107,7 @@ export default class ScreenTitles {
       this.titles.push(mesh);
     });
     this.nTitles = this.titles.length;
+    this.materials[0].uniforms.uColor.value.z = 1;
   }
 
   setTouchPlanes() {
@@ -120,42 +130,75 @@ export default class ScreenTitles {
     });
   }
 
-  onPointermove() {
-    this.raycaster.setFromCamera(this.world.mouse, this.camera);
+  updateActiveProject(index) {
+    if (this.activeProject === index) return;
+    this.materials[this.activeProject].uniforms.uActive.value = false;
+    this.activeProject = index;
+    this.materials[this.activeProject].uniforms.uActive.value = true;
+    this.world.faScreen.updateActiveProject(index);
+  }
+
+  checkIntersect() {
     const intersects = this.raycaster.intersectObjects(this.touchPlanes);
     if (intersects.length) {
       this.hover = true;
       const hit = intersects[0];
-      this.activeProject = hit.object.index;
+      this.updateActiveProject(hit.object.index);
     } else {
       this.hover = false;
     }
+  }
+
+  onPointermove() {
+    if (this.world.template !== "/projects") return;
+    this.raycaster.setFromCamera(this.world.mouse, this.camera);
+    this.checkIntersect();
   }
 
   onWheel(delta) {
-    this.scroll.target = clamp(
-      this.scroll.target + delta * 0.5,
-      0,
-      this.scroll.limit
-    );
+    if (this.world.template !== "/projects") return;
+    // this.scroll.target = clamp(
+    //   this.scroll.target + delta * 0.5,
+    //   0,
+    //   this.scroll.limit
+    // );
+    this.scroll.target = this.scroll.target + delta * 0.5;
 
-    const intersects = this.raycaster.intersectObjects(this.touchPlanes);
-    if (intersects.length) {
-      this.hover = true;
-      const hit = intersects[0];
-      this.activeProject = hit.object.index;
-    } else {
-      this.hover = false;
+    this.checkIntersect();
+
+    //
+    this.zeroMagnet = false;
+    this.overlayTop.style.visibility = "hidden";
+    if (this.scroll.target < 0) {
+      this.overlayTop.style.visibility = "visible";
+      this.zeroMagnet = true;
+    }
+    this.limitMagnet = false;
+    this.overlayBottom.style.visibility = "hidden";
+    if (this.scroll.target > this.scroll.limit) {
+      this.overlayBottom.style.visibility = "visible";
+      this.limitMagnet = true;
     }
   }
 
+  handleScrollOverflowTop() {
+    if (!this.zeroMagnet) return;
+
+    this.scroll.target = lerp(this.scroll.target, 0, 0.2);
+  }
+
+  handleScrollOverflowBottom() {
+    if (!this.limitMagnet) return;
+
+    this.scroll.target = lerp(this.scroll.target, this.scroll.limit, 0.2);
+  }
+
   onPointerdown() {
+    if (this.world.template !== "/projects") return;
     if (this.hover) {
-      this.world.onChange({
-        url: this.projectsData.find(
-          (project) => project.index === this.activeProject
-        ).path,
-      });
+      // this.world.onChange({
+      //   url: this.paths[this.activeProject],
+      // }); // clicking on btoh the titles and the screen causes problems
     }
   }
 
@@ -231,9 +274,21 @@ export default class ScreenTitles {
       this.scroll.lerp
     );
     this.group.position.y = this.group.initialPosition + this.scroll.current;
+
+    this.handleScrollOverflowTop();
+    this.handleScrollOverflowBottom();
+  }
+
+  tempSetup() {
+    this.rt = new THREE.WebGLRenderTarget(512, 512, {
+      minFilter: THREE.LinearFilter,
+      type: THREE.FloatType,
+      magFilter: THREE.LinearFilter,
+    });
   }
 
   update() {
+    if (this.world.template !== "/projects") return;
     this.updateScrollPosition();
     this.world.renderer.render(this.scene, this.camera);
   }
@@ -258,5 +313,9 @@ export default class ScreenTitles {
 
   toProjects() {
     this.show();
+  }
+
+  toProjectDetail() {
+    this.hide();
   }
 }

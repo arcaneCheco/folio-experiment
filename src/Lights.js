@@ -22,7 +22,7 @@ export default class Lights {
     // this.scene.add(helper);
     // this.scene.add(this.sun3);
 
-    this.sun4 = new THREE.SpotLight(0x0040c0, 5, 100, 3, 1, 0);
+    this.sun4 = new THREE.SpotLight(0x0040c0, 0.2, 100, 3, 1, 0);
     this.sun4.position.set(0, 15, -100);
     this.sun4.castShadow = true;
     // this.scene.add(new THREE.CameraHelper(this.sun4.shadow.camera));
@@ -30,10 +30,10 @@ export default class Lights {
     // this.scene.add(helper4);
     this.scene.add(this.sun4);
 
-    this.ambinet = new THREE.AmbientLight(0x0040c0, 0.06);
+    this.ambinet = new THREE.AmbientLight(0x0040c0, 0);
     this.scene.add(this.ambinet);
 
-    this.pointerLight = new THREE.PointLight(0xccff22, 1);
+    this.pointerLight = new THREE.PointLight(0xccff22, 0);
     this.scene.add(this.pointerLight);
 
     this.debug = this.world.debug.addFolder({

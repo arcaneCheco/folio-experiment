@@ -30,17 +30,17 @@ export default class Camera {
       expanded: false,
     });
     this.cameraDebugFolder
-      .addButton({ title: "parallax vs orbit" })
+      .addButton({ title: "toggle orbit" })
       .on("click", () => {
-        const isParallaxMode = !this.enableParallax;
-        this.controls.enabled = !isParallaxMode;
-        this.enableParallax = isParallaxMode;
+        this.enableParallax = false;
+        this.controls.enabled = !this.controls.enabled;
         this.onResize();
         this.instance.rotation.set(0, 0, 0);
       });
     this.cameraDebugFolder
       .addButton({ title: "toggle parallax" })
       .on("click", () => {
+        this.controls.enabled = false;
         this.enableParallax = !this.enableParallax;
         this.instance.rotation.set(0, 0, 0);
       });

@@ -33,6 +33,7 @@ export default class MsdfTitle {
       uniforms: {
         uMap: { value: this.textureLoader.load("Audiowide-Regular.ttf.png") },
         uColor: { value: new THREE.Vector3(1, 1, 0) },
+        uActive: { value: false },
       },
     });
     this.mesh = new THREE.Mesh(this.geometry, this.material);

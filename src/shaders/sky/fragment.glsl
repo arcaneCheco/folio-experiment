@@ -135,7 +135,8 @@ void main() {
 
 
     skyCol = mix( sky, col, smoothstep(0.0,0.1, y) );
-    gl_FragColor = vec4(skyCol, 1.) * 1.3;
+    gl_FragColor = vec4(skyCol, 1.);
+    // gl_FragColor *= 2.3;
 
 
     float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;
@@ -148,7 +149,7 @@ void main() {
     sundisk = step(moonSize, cosTheta);
     sundisk = smoothstep(moonSize, moonSize * 1.005, cosTheta);
     gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3(1.), sundisk - 0.);
-    gl_FragColor += 0.2;
+    // gl_FragColor += 0.2;
 
     gl_FragColor = vec4(sky, 1.);
 }

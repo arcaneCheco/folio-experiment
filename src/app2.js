@@ -14,6 +14,11 @@ import FaScreen from "./FaScreen";
 import ScreenTitles from "./ScreenTitles";
 import ProjectDetail from "./ProjectDetail";
 import Navigation from "./Navigation";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+// import * as POST from "postprocessing";
+// import { BloomEffect, EffectComposer, EffectPass, RenderPass, SelectiveBloomEffect } from "postprocessing";
 
 export default class World {
   static instance;
@@ -37,26 +42,102 @@ export default class World {
     this.textureLoader = new THREE.TextureLoader();
     this.isPreloaded = false;
     this.pane = new Pane();
+    this.pane.containerElem_.style.zIndex = 2;
     this.pane
       .addButton({ title: "show/hide" })
       .on("click", () => (this.debug.hidden = !this.debug.hidden));
-    this.debug = this.pane.addFolder({ title: "debug", hidden: true });
+    this.debug = this.pane.addFolder({ title: "debug", hidden: false });
     this.raycaster = new THREE.Raycaster();
     this.setSettings();
 
     this.setRenderer();
     this.setCamera();
     this.setLight();
-    this.addRandomObjects();
+    // this.addRandomObjects();
     this.setFixedAspectScreen();
 
-    this.setWater();
     this.setSky();
+    this.setWater();
     this.setScreenTitles();
     this.resources = new Resources();
     this.onResize();
-    // this.addListeners();
+    this.setPost();
+    this.addListeners();
     this.render();
+  }
+
+  setPost() {
+    this.renderScene = new RenderPass(this.scene, this.camera);
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      1.5,
+      0.4,
+      0.85
+    );
+    this.bloomPass.threshold = 0.21;
+    this.bloomPass.strength = 0.6;
+    this.bloomPass.radius = 1.95;
+    this.bloomPass.renderToScreen = true;
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.setSize(window.innerWidth, window.innerHeight);
+
+    this.composer.addPass(this.renderScene);
+    this.composer.addPass(this.bloomPass);
+
+    // this.camera.layers.enable(1);
+    // this.faScreen.mesh.layers.enable(1);
+
+    this.uniform = { value: null };
+    this.mask = {
+      read: null,
+      write: null,
+
+      swap: () => {
+        let temp = this.mask.read;
+        this.mask.read = this.mask.write;
+        this.mask.write = temp;
+        this.uniform.value = this.mask.read.texture;
+      },
+    };
+    this.mask.read = new THREE.WebGLRenderTarget(1024, 1024, {
+      minFilter: THREE.LinearFilter,
+      type: THREE.FloatType,
+      magFilter: THREE.LinearFilter,
+      // format: THREE.RGBAFormat,
+      // generateMipmaps: false,
+      // stencilBuffer: false,
+    });
+    this.mask.write = new THREE.WebGLRenderTarget(1024, 1024, {
+      minFilter: THREE.LinearFilter,
+      type: THREE.FloatType,
+      magFilter: THREE.LinearFilter,
+      // format: THREE.RGBAFormat,
+      // generateMipmaps: false,
+      // stencilBuffer: false,
+    });
+    this.lumMat = new THREE.ShaderMaterial({
+      vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        gl_Position = vec4(position, 1.);
+        vUv = uv;
+      }
+      `,
+      fragmentShader: `
+      varying vec2 vUv;
+      uniform sampler2D tDiffuse;
+      void main() {
+        gl_FragColor = texture2D(tDiffuse, vUv);
+        gl_FragColor.r = texture2D(tDiffuse, vUv + vec2(0.1, 0.)).r;
+      }
+      `,
+      uniforms: {
+        tDiffuse: this.uniform,
+      },
+    });
+    this.mask.swap();
+    this.lumPP = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lumMat);
   }
 
   onPreloaded() {
@@ -65,9 +146,44 @@ export default class World {
     this.faScreen && this.faScreen.onPreloaded();
     this.screenTitles && this.screenTitles.onPreloaded();
     this.setNavigation();
-    this.addListeners();
-    this.onChange({ url: window.location.pathname });
-    // this.onResize();
+    // this.addListeners();
+    console.log(window.location);
+    this.onChange({
+      url:
+        window.location.pathname === "/"
+          ? window.location.pathname
+          : window.location.pathname.slice(0, -1),
+    });
+  }
+
+  onChange({ url, push = true }) {
+    if (url == this.template) return;
+
+    // console.log(url);
+
+    this.previousTemplate = this.template;
+    this.template = url;
+
+    if (push) {
+      window.history.pushState({}, "", `${url}`);
+    }
+
+    if (this.template === "/") {
+      this.screenTitles.toHome();
+      this.faScreen.toHome();
+    } else if (this.template === "/projects") {
+      console.log("To projects?");
+      console.log("HERERE");
+      this.screenTitles.toProjects();
+      this.faScreen.toProjects();
+    } else if (this.template.includes("/projects/d")) {
+      console.log("NOT HEREER");
+      this.screenTitles.toProjectDetail();
+      this.faScreen.toProjectDetail();
+    } else if (this.template === "/about") {
+      this.screenTitles.toAbout();
+      this.faScreen.toAbout();
+    }
   }
 
   setSettings() {
@@ -258,20 +374,21 @@ export default class World {
     const intersect = this.raycaster.intersectObject(this.water.t);
     if (intersect.length) {
       const uv = intersect[0].uv;
-      this.water.buffer.onMousemove(uv.x, uv.y);
+
+      this.water && this.water.onPointermove(uv);
 
       const pos = intersect[0].point;
       this.lights.pointerLight.position.copy(pos);
       this.lights.pointerLight.position.z += 0.5;
     }
-    // this.faScreen && this.faScreen.onPointermove();
+    this.faScreen && this.faScreen.onPointermove();
     this.screenTitles && this.screenTitles.onPointermove();
   }
 
   onMousedown() {
     this.water.buffer.onMousedown();
-    // this.faScreen && this.faScreen.onPointerdown();
-    // this.screenTitles && this.screenTitles.onPointerdown();
+    this.faScreen && this.faScreen.onPointerdown();
+    this.screenTitles && this.screenTitles.onPointerdown();
   }
   onMouseup() {
     this.water.buffer.onMouseup();
@@ -310,25 +427,6 @@ export default class World {
     });
   }
 
-  onChange({ url, push = true }) {
-    if (url == this.template) return;
-
-    this.previousTemplate = this.template;
-    this.template = url;
-
-    if (push) {
-      window.history.pushState({}, "", `${url}`);
-    }
-
-    if (this.template === "/") {
-      this.screenTitles.toHome();
-    } else if (this.template === "/about") {
-      this.screenTitles.toAbout();
-    } else if (this.template === "/projects") {
-      this.screenTitles.toProjects();
-    }
-  }
-
   update(delta) {
     // this.sky && this.sky.update();
 
@@ -346,7 +444,26 @@ export default class World {
     this.time += delta;
     this.update(delta);
     this.renderer.render(this.scene, this.camera);
+
+    // this.update(delta);
+    // this.composer.render();
+
+    // this.renderer.setRenderTarget(this.mask.write);
+    // this.update(delta);
+    // this.renderer.render(this.scene, this.camera);
+    // this.renderer.setRenderTarget(null);
+    // this.mask.swap();
+    // this.renderer.clear();
     // this.screenTitles && this.screenTitles.update();
+    // this.renderer.render(this.lumPP, this.camera);
+
+    // this.camera.layers.set(1);
+    // this.composer.render();
+
+    // this.renderer.clearDepth();
+    // this.camera.layers.set(0);
+    // this.update(delta);
+    // this.renderer.render(this.scene, this.camera);
 
     window.requestAnimationFrame(this.render.bind(this));
   }
