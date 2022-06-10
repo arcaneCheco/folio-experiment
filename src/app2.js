@@ -62,6 +62,7 @@ export default class World {
     this.resources = new Resources();
     this.onResize();
     this.setPost();
+    // this.setGodrays()
     this.addListeners();
     this.render();
   }
@@ -139,6 +140,22 @@ export default class World {
     this.mask.swap();
     this.lumPP = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lumMat);
   }
+
+  // setGodrays() {
+  //   const OCCLUSION_LAYER = 1;
+  //   const geometry = new THREE.SphereBufferGeometry( 1, 16, 16 );
+  //   const material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+  //   this.lightSphere = new THREE.Mesh( geometry, material );
+  //   this.lightSphere.layers.set( OCCLUSION_LAYER );
+  //   this.scene.add( this.lightSphere );
+
+  //    // the all black second box that is used to create the occlusion
+  //    const material2 = new THREE.MeshBasicMaterial( { color:0x000000 } );
+  //    occlusionBox = new THREE.Mesh( geometry, material);
+  //    occlusionBox.position.z = 2;
+  //    occlusionBox.layers.set( OCCLUSION_LAYER );
+  //    scene.add( occlusionBox );
+  // }
 
   onPreloaded() {
     this.isPreloaded = true;
@@ -428,15 +445,13 @@ export default class World {
   }
 
   update(delta) {
-    // this.sky && this.sky.update();
-
-    this.faScreen && this.faScreen.update();
     this.water && this.water.update(delta);
+    this.sky && this.sky.update();
     this.screenTitles && this.screenTitles.update();
+    this.faScreen && this.faScreen.update();
+    this.cameraWrapper.update();
 
     // this.updateRandonObjects();
-
-    this.cameraWrapper.update();
   }
 
   render() {

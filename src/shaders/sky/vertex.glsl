@@ -1,3 +1,4 @@
+
 varying vec3 vWorldPosition;
 varying vec2 vUv;
 varying vec2 vMatcapUv;

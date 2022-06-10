@@ -6,6 +6,10 @@ import preVertexShader from "./shaders/preloader/vertex.glsl";
 import preFragmentShader from "./shaders/preloader/fragment.glsl";
 import { degToRad, clamp } from "three/src/math/MathUtils";
 import GSAP from "gsap";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
+// import hdrSource from "./empty_warehouse_01_2k.hdr";
+import normalIng from "./normal.jpg";
 
 export default class FaScreen {
   constructor() {
@@ -41,6 +45,8 @@ export default class FaScreen {
 
   setGeometry() {
     this.geometry = new THREE.BoxGeometry(1, 1, 1);
+    this.geometry = new RoundedBoxGeometry(1, 1, 1, 2, 0.1);
+    console.log(this.geometry);
   }
 
   setMaterial() {
@@ -102,7 +108,30 @@ export default class FaScreen {
           gl_FragColor = vec4(1., 0., 0., 1.);
         }
       `,
+      wireframe: false,
     });
+
+    const hdrEquirect = new RGBELoader().load(
+      "empty_warehouse_01_2k.hdr",
+      () => {
+        hdrEquirect.mapping = THREE.EquirectangularReflectionMapping;
+      }
+    );
+    this.defaultMaterial = new THREE.MeshPhysicalMaterial({
+      // metalness: 0,
+      roughness: 0.7,
+      transmission: 1,
+      thickness: 0.5,
+      envMap: hdrEquirect,
+      envMapIntensity: 1.5,
+      clearcoat: 1,
+      clearcoatRoughness: 0.1,
+      normalScale: new THREE.Vector2(1),
+      normalMap: this.world.textureLoader.load(normalIng),
+      clearcoatNormalMap: this.world.textureLoader.load(normalIng),
+      clearcoatNormalScale: new THREE.Vector2(0.3),
+    });
+    this.material = this.defaultMaterial;
     this.material = [
       this.defaultMaterial,
       this.defaultMaterial,

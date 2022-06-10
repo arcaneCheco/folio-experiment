@@ -2,12 +2,15 @@ import * as THREE from "three";
 import skyVertex from "./shaders/sky/vertex.glsl";
 import skyFragment from "./shaders/sky/fragment.glsl";
 import World from "./app2";
+// import matcapImg from "./testmapcap.jpeg";
+import matcapImg from "./testmapcap2.jpeg";
 
 export default class Sky {
   constructor() {
     this.world = new World();
     this.scene = this.world.scene;
     this.textureLoader = this.world.textureLoader;
+    this.matcap = this.textureLoader.load(matcapImg);
 
     // const geometry = new THREE.BoxGeometry(1, 1, 1);
     const geometry = new THREE.SphereGeometry(1);
@@ -20,8 +23,9 @@ export default class Sky {
       uniforms: {
         uGreyNoise: { value: this.textureLoader.load("greyNoise.png") },
         uTime: { value: 0 },
+        uMatcap: { value: this.matcap },
       },
-      transparent: true,
+      // transparent: true,
     });
     this.mesh = new THREE.Mesh(geometry, this.material);
     // this.mesh.scale.set(1000, 1000, 1000);

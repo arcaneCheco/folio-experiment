@@ -47,6 +47,7 @@
 
 uniform float uTime;
 uniform sampler2D uGreyNoise;
+uniform sampler2D uMatcap;
 varying vec3 vWorldPosition;
 varying vec2 vMatcapUv;
 
@@ -100,20 +101,94 @@ float pattern(vec2 uv, float time, inout vec2 q, inout vec2 r) {
     }
 
 // pattern adapted from: https://www.shadertoy.com/view/wttXz8
+
+/*********/
+// float spike( float x ) { // spike(0)=0, spike(0.5)=1, spike(1)=0
+//     return 0.5 * abs( mod( 4. * x - 2., 4. ) - 2. );
+// }
+// float trees0( float x ) {
+//     float f0 = spike( x + .7 ) - .8;
+//     float f1 = spike( 2. * x + .2 ) - .68;
+//     float f2 = spike( 3. * x + .55 ) - .73;
+//     float f3 = spike( 2. * x + .4 ) - .76;
+//     float f4 = spike( 3. * x + .85 ) - .79;
+//     float f5 = spike( 2. * x + .55 ) - .79;
+//     float f6 = spike( 3. * x + .3 ) - .82;
+//     return .5 * max( 0., max( f0, max( f1, max( f2, max( f3, max( f4, max( f5, f6 ) ) ) ) ) ) );
+// }
+// float yTree = trees0(vUv.x * 3.);
+// if (yTree > y) {
+//   gl_FragColor.rbg =  vec3( 0.);
+/*********/
+// mountains
+#pragma glslify: snoise = require(../partials/simplex3d.glsl)
+float FBM2( vec2 uv, float z )
+{
+	float lacunarity = 2.0;
+	float gain = 0.25;
+    float amplitude = 1.0;
+    float frequency = 1.0;
+    float sum = 0.0;
+    for(int i = 0; i < 4; ++i)
+    {
+        sum += amplitude * snoise(vec3( uv * frequency, z ));
+        amplitude *= gain;
+        frequency *= lacunarity;
+    }
+    return sum;
+}
+// color *= clamp( (uv.y*3.0-FBM(uv * 10.0, 0.) * .2) * 50.0 - 10.0, 0.0, 1.0 );
+/*********/
+// https://www.shadertoy.com/view/sdB3Dz
+float random2f(in vec2 q)
+{
+    return fract(cos(dot(q,vec2(143.543,56.32131)))*46231.56432);
+}
+
+float noiseagain(vec2 st)
+{
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+    
+    float a = random2f(i);
+    float b = random2f(i + vec2(1.,0.));
+    float c = random2f(i + vec2(0., 1.));
+    float d = random2f(i + vec2(1., 1.));
+    
+    vec2 u = f * f * (3. - 2. * f);
+    
+    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+// From Inigo Quilez
+float value_noise(in vec2 uv)
+{
+    float f = 0.;
+    uv *= 8.0;
+    mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+    f  = 0.5000*noiseagain( uv ); uv = m*uv;
+    f += 0.2500*noiseagain( uv ); uv = m*uv;
+    f += 0.1250*noiseagain( uv ); uv = m*uv;
+    f += 0.0625*noiseagain( uv ); uv = m*uv;
+    return f;
+}
+/********/
+
 void main() {
     vec2 nUv = vUv - vec2(0.5);
-    float t = uTime * 0.1;
+    // nUv = vWorldPosition.xz;
+    float t = uTime * .2;
     nUv = rotUv(nUv, 0.1 * t);
     nUv *= 0.9 * (sin(t)) + 3.;
     nUv.x -= 0.2 * t;
 
-    vec2 q = vec2(0.);
+    vec2 q = vec2(0.5);
     vec2 r = vec2(0.);
 
     float c = 3. * abs(pattern(nUv, t, q, r));
     vec3 col = vec3(c);
     float uC = 0.9;
-    col.r -= dot(q, r) * 5. * uC;
+    // col.r -= dot(q, r) * 5. * uC;
     // col.g -= dot(q, r) * 5. * 0.3;
     // col.b += dot(q, r) * 10. * (1. - uC);
     // col.b -= dot(q, r) * 1. * (uC);
@@ -122,6 +197,9 @@ void main() {
     col = mix(vec3(0.), col, strength);
 
     float scale = 0.01;
+    scale = 1./150.;
+    scale = 1./75.;
+    // scale = 1.;
     float x = vWorldPosition.x * scale;
     float y = vWorldPosition.y * scale;
     vec3 sky = vec3(0.0,0.05,0.1)*1.4;
@@ -131,6 +209,9 @@ void main() {
     skyCol += 0.1*pow(clamp(1.0-abs(y),0.0,1.0),9.0);
     // skyCol = mix( skyCol, sky, smoothstep(0.0,0.1, y) );
 
+    // vec3 horizon = vec3(smoothstep(0.,1.0,pow(19.,-abs(y)-abs(x)*.4)));
+    // sky += horizon;
+
 
 
 
@@ -139,17 +220,57 @@ void main() {
     // gl_FragColor *= 2.3;
 
 
-    float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;
-    vec3 posOffset = vec3(0., 1., 0.);
-    vec3 direction = normalize( (vWorldPosition - posOffset) - vec3(0., 3, 23) );
-    vec3 vSunDirection = vec3(0., 0., -1);
+    // float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;
+    vec3 posOffset = vec3(30., 10., -75.);
+    // posOffset = vec3(40., 0., 0.);
+    vec3 target = vec3(0., -15., 70.);
+    vec3 vSunDirection = normalize(target - posOffset);
+    posOffset -= vSunDirection * 90.;
+
+    vec3 direction = normalize( (vWorldPosition - posOffset));
+    // vec3 vSunDirection = vec3(0., 0., 1);
     float cosTheta = dot( direction, vSunDirection );
-    float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00002, cosTheta );
-    float moonSize = 0.995;
-    sundisk = step(moonSize, cosTheta);
-    sundisk = smoothstep(moonSize, moonSize * 1.005, cosTheta);
-    gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3(1.), sundisk - 0.);
+    // float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00002, cosTheta );
+    // sundisk = step(moonSize, cosTheta);
+    float moonSize = 0.99;
+    // float sundisk = smoothstep(moonSize, moonSize * 1.010, cosTheta) * step(vWorldPosition.z, 0.);
+    float sundisk = smoothstep(moonSize, moonSize * 1.010, cosTheta);
+    // sundisk = smoothstep(moonSize, moonSize + 0.01000001, cosTheta);
+    // gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3(2.), sundisk - 0.);
     // gl_FragColor += 0.2;
 
+
+    float jacked_time = 5.5*uTime;
+    const vec2 scaleHeat = vec2(.5);
+    vec2 nXY = vec2(x, y) + 0.11*sin(scaleHeat*jacked_time + length( vec2(x, y) )*10.0);
+
+    gl_FragColor = vec4(sky, c*7.);
     gl_FragColor = vec4(sky, 1.);
+    // gl_FragColor = vec4(nXY, 0.5, 1.);
+    // gl_FragColor = texture2D(uMatcap, vMatcapUv);
+    gl_FragColor.rgb = mix( gl_FragColor.rgb, vec3(1.), sundisk - 0.);
+    // gl_FragColor.a = c*4.;
+
+  //mountains
+    float color = clamp( (y*2.5-FBM2(vec2(x*.3,y*0.3) * 10.0, 0.) * .15) * 50.0 - 10.0, 0.0, 1.0 );
+    gl_FragColor.rgb *= color;
+
+    //
+    float cloudss = smoothstep(0.95,0.,1.-y);
+    vec3 cloudcol = vec3(0.);
+    vec3 suncol1 = vec3(0.5, 0.5, 0.) * 0.;
+    vec3 cloudcolor = mix(cloudcol, suncol1, 0.7*(1.-y+0.));
+    
+    float cloud_val1 = (value_noise(vec2(x, y)*vec2(1.,7.)+vec2(1.,0.)*-uTime*0.010));
+    float cloud_val2 = (value_noise(vec2(x, y)*vec2(2.,8.)+vec2(2.,.2)*-(uTime)*0.02));
+    float cloud_val3 = (value_noise(vec2(x, y)*vec2(1.,5.)+vec2(1.,0.)*-(uTime)*0.005));
+    float cloud_val = sqrt(cloud_val2*cloud_val1);
+    cloud_val = sqrt(cloud_val3*cloud_val);
+    
+    // Hard(er)-edged clouds
+    cloud_val = smoothstep(0.48,0.5,cloud_val);
+
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, cloudcolor, cloud_val*cloudss);
+    gl_FragColor.a = 1.;
+
 }

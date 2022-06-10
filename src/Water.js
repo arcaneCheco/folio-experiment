@@ -46,6 +46,7 @@ export class Water {
         {
           heightmap: { value: null },
           u_buffer: { value: null },
+          uTime: { value: 0 },
         },
       ]),
       vertexShader: v,
@@ -59,15 +60,17 @@ export class Water {
     // this.material.color = new THREE.Color(0x0040c0);
     this.material.color = new THREE.Color(0xffffff);
     this.material.specular = new THREE.Color(0x11ffff);
+    this.material.specular = new THREE.Color(0x00ffff);
     this.material.shininess = 50;
 
     // Sets the uniforms with the material values
     this.material.uniforms["diffuse"].value = this.material.color;
     this.material.uniforms["specular"].value = this.material.specular;
-    this.material.uniforms["shininess"].value = Math.max(
-      this.material.shininess,
-      1e-4
-    );
+    // this.material.uniforms["shininess"].value = Math.max(
+    //   this.material.shininess,
+    //   1e-4
+    // );
+    this.material.uniforms["shininess"].value = this.material.shininess;
     this.material.uniforms["opacity"].value = this.material.opacity;
     this.material.uniforms["tReflectionMap"] = { value: null };
     this.material.uniforms["textureMatrix"] = { value: null };
@@ -89,7 +92,7 @@ export class Water {
                   vec2 uv = coord.xy + coord.z * (vNormal.xz) * 0.02;
                   vec4 texR = texture2D(tReflectionMap, vec2( 1.0 - uv.x, uv.y ) );
                   //gl_FragColor *= texR;
-                  gl_FragColor = mix( gl_FragColor, vec4( texR.rgb, 1.), texR.a * 0.3 );
+                  gl_FragColor = mix( gl_FragColor, vec4( texR.rgb, 1.), texR.a * 0.8 );
                   //gl_FragColor += (1.-gl_FragColor.a) * vec4( texR.rgb, 1 ) *texR.a;
                   float disk = length(vUv - vec2(0.5));
                   if (disk > 0.5) discard;`
