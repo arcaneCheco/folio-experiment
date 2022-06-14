@@ -202,7 +202,7 @@ void main() {
     // scale = 1.;
     float x = vWorldPosition.x * scale;
     float y = vWorldPosition.y * scale;
-    vec3 sky = vec3(0.0,0.05,0.1)*1.4;
+    vec3 sky = vec3(0.0,0.05,0.1)*1.4*0.5;
     sky += 0.2*pow(1.0-max(0.0, y),2.0);
 
     vec3 skyCol = vec3(0.);
@@ -256,21 +256,22 @@ void main() {
     gl_FragColor.rgb *= color;
 
     //
-    float cloudss = smoothstep(0.95,0.,1.-y);
+    float cloudss = smoothstep(0.95,0.2,1.-y);
     vec3 cloudcol = vec3(0.);
     vec3 suncol1 = vec3(0.5, 0.5, 0.) * 0.;
     vec3 cloudcolor = mix(cloudcol, suncol1, 0.7*(1.-y+0.));
-    
-    float cloud_val1 = (value_noise(vec2(x, y)*vec2(1.,7.)+vec2(1.,0.)*-uTime*0.010));
-    float cloud_val2 = (value_noise(vec2(x, y)*vec2(2.,8.)+vec2(2.,.2)*-(uTime)*0.02));
-    float cloud_val3 = (value_noise(vec2(x, y)*vec2(1.,5.)+vec2(1.,0.)*-(uTime)*0.005));
+  
+    float ta = uTime * 3.;
+    float cloud_val1 = (value_noise(vec2(x, y)*vec2(1.,7.)+vec2(1.,0.)*-ta*0.010));
+    float cloud_val2 = (value_noise(vec2(x, y)*vec2(2.,8.)+vec2(2.,.2)*-(ta)*0.02));
+    float cloud_val3 = (value_noise(vec2(x, y)*vec2(1.,5.)+vec2(1.,0.)*-(ta)*0.005));
     float cloud_val = sqrt(cloud_val2*cloud_val1);
     cloud_val = sqrt(cloud_val3*cloud_val);
     
     // Hard(er)-edged clouds
-    cloud_val = smoothstep(0.48,0.5,cloud_val);
+    cloud_val = smoothstep(0.48,0.5,cloud_val) * 2.;
 
     gl_FragColor.rgb = mix(gl_FragColor.rgb, cloudcolor, cloud_val*cloudss);
-    gl_FragColor.a = 1.;
+    // gl_FragColor.a = 1.;
 
 }

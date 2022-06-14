@@ -54,7 +54,7 @@ void main() {
     vec2 uvfbm = uv * 100.0;
 	uvfbm.y += uTime * 2.;
     vec2 disturb = vec2( pattern( uvfbm ), pattern( uvfbm + vec2( 5.2, 1.3 ) ) );
-	disturb *= 0.12;
+	disturb *= 0.14;
 
     #include <morphnormal_vertex>
 	#include <skinbase_vertex>

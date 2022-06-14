@@ -47,7 +47,7 @@ export default class Lights {
     // this.scene.add(new THREE.CameraHelper(this.sun4.shadow.camera));
     const helper4 = new THREE.SpotLightHelper(this.sun4);
     window.setTimeout(() => helper4.update(), 200);
-    this.scene.add(helper4);
+    // this.scene.add(helper4);
     // helper4.update();
     this.scene.add(this.sun4);
 
@@ -75,6 +75,7 @@ export default class Lights {
     // this.sun4.add(lensflare);
 
     this.ambinet = new THREE.AmbientLight(0x0040c0, 0);
+    this.ambinet = new THREE.AmbientLight(0xffffff, 0);
     this.scene.add(this.ambinet);
 
     this.pointerLight = new THREE.PointLight(0xccff22, 0);

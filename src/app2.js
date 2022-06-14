@@ -17,8 +17,17 @@ import Navigation from "./Navigation";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 // import * as POST from "postprocessing";
 // import { BloomEffect, EffectComposer, EffectPass, RenderPass, SelectiveBloomEffect } from "postprocessing";
+// import {
+//   GodRaysEffect,
+//   EffectPass,
+//   SelectiveBloomEffect,
+//   BloomEffect,
+//   RenderPass,
+//   EffectComposer,
+// } from "postprocessing";
 
 export default class World {
   static instance;
@@ -61,10 +70,101 @@ export default class World {
     this.setScreenTitles();
     this.resources = new Resources();
     this.onResize();
-    this.setPost();
-    // this.setGodrays()
+    // this.setPost();
+    // this.setGodrays();
+    this.setSelectiveBloom();
     this.addListeners();
     this.render();
+  }
+
+  setSelectiveBloom() {
+    this.materials = {};
+    this.darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
+    const BLOOM_SCENE = 1;
+    this.bloomLayer = new THREE.Layers();
+    this.bloomLayer.set(BLOOM_SCENE);
+    this.faScreen.mesh.layers.enable(BLOOM_SCENE);
+
+    // render-pass
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    // bloom
+    this.bloomComposer = new EffectComposer(this.renderer);
+    this.bloomComposer.renderToScreen = false;
+    this.bloomComposer.addPass(this.renderPass);
+    const res = 1;
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth * res, window.innerHeight * res),
+      1.5,
+      0.4,
+      0.85
+    );
+    bloomPass.threshold = 0;
+    bloomPass.strength = 5;
+    bloomPass.radius = 0;
+    this.exposure = 0;
+    this.bloomComposer.addPass(bloomPass);
+
+    this.debug.addInput(bloomPass, "strength", {
+      min: 0,
+      max: 3,
+      step: 0.01,
+    });
+    this.debug.addInput(bloomPass, "threshold", {
+      min: 0,
+      max: 1,
+      step: 0.01,
+    });
+    this.debug.addInput(bloomPass, "radius", {
+      min: 0,
+      max: 50,
+      step: 0.01,
+    });
+    this.debug
+      .addInput(this, "exposure", {
+        min: 0.1,
+        max: 6,
+        step: 0.001,
+      })
+      .on(
+        "change",
+        () => (this.renderer.toneMappingExposure = Math.pow(this.exposure, 4.0))
+      );
+
+    // final
+    this.finalComposer = new EffectComposer(this.renderer);
+    this.finalComposer.addPass(this.renderPass);
+
+    this.finalEffect = new THREE.ShaderMaterial({
+      uniforms: {
+        baseTexture: { value: null },
+        bloomTexture: { value: this.bloomComposer.renderTarget2.texture },
+      },
+      vertexShader: `
+      varying vec2 vUv;
+
+    		void main() {
+
+    			vUv = uv;
+
+    			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+    		}`,
+      fragmentShader: `
+            uniform sampler2D baseTexture;
+    		uniform sampler2D bloomTexture;
+
+    		varying vec2 vUv;
+
+    		void main() {
+
+    			gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+    		}`,
+      defines: {},
+    });
+
+    const finalPass = new ShaderPass(this.finalEffect, "baseTexture");
+    finalPass.needsSwap = true;
+    this.finalComposer.addPass(finalPass);
   }
 
   setPost() {
@@ -75,70 +175,64 @@ export default class World {
       0.4,
       0.85
     );
-    this.bloomPass.threshold = 0.21;
+    this.bloomPass.threshold = 0.81;
     this.bloomPass.strength = 0.6;
     this.bloomPass.radius = 1.95;
     this.bloomPass.renderToScreen = true;
 
     this.composer = new EffectComposer(this.renderer);
-    this.composer.setSize(window.innerWidth, window.innerHeight);
+    this.composer.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5);
 
     this.composer.addPass(this.renderScene);
     this.composer.addPass(this.bloomPass);
 
-    // this.camera.layers.enable(1);
-    // this.faScreen.mesh.layers.enable(1);
+    this.camera.layers.enable(1);
+    this.faScreen.mesh.layers.enable(1);
 
-    this.uniform = { value: null };
-    this.mask = {
-      read: null,
-      write: null,
+    // this.uniform = { value: null };
+    // this.mask = {
+    //   read: null,
+    //   write: null,
 
-      swap: () => {
-        let temp = this.mask.read;
-        this.mask.read = this.mask.write;
-        this.mask.write = temp;
-        this.uniform.value = this.mask.read.texture;
-      },
-    };
-    this.mask.read = new THREE.WebGLRenderTarget(1024, 1024, {
-      minFilter: THREE.LinearFilter,
-      type: THREE.FloatType,
-      magFilter: THREE.LinearFilter,
-      // format: THREE.RGBAFormat,
-      // generateMipmaps: false,
-      // stencilBuffer: false,
-    });
-    this.mask.write = new THREE.WebGLRenderTarget(1024, 1024, {
-      minFilter: THREE.LinearFilter,
-      type: THREE.FloatType,
-      magFilter: THREE.LinearFilter,
-      // format: THREE.RGBAFormat,
-      // generateMipmaps: false,
-      // stencilBuffer: false,
-    });
-    this.lumMat = new THREE.ShaderMaterial({
-      vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        gl_Position = vec4(position, 1.);
-        vUv = uv;
-      }
-      `,
-      fragmentShader: `
-      varying vec2 vUv;
-      uniform sampler2D tDiffuse;
-      void main() {
-        gl_FragColor = texture2D(tDiffuse, vUv);
-        gl_FragColor.r = texture2D(tDiffuse, vUv + vec2(0.1, 0.)).r;
-      }
-      `,
-      uniforms: {
-        tDiffuse: this.uniform,
-      },
-    });
-    this.mask.swap();
-    this.lumPP = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lumMat);
+    //   swap: () => {
+    //     let temp = this.mask.read;
+    //     this.mask.read = this.mask.write;
+    //     this.mask.write = temp;
+    //     this.uniform.value = this.mask.read.texture;
+    //   },
+    // };
+    // this.mask.read = new THREE.WebGLRenderTarget(1024, 1024, {
+    //   minFilter: THREE.LinearFilter,
+    //   type: THREE.FloatType,
+    //   magFilter: THREE.LinearFilter,
+    // });
+    // this.mask.write = new THREE.WebGLRenderTarget(1024, 1024, {
+    //   minFilter: THREE.LinearFilter,
+    //   type: THREE.FloatType,
+    //   magFilter: THREE.LinearFilter,
+    // });
+    // this.lumMat = new THREE.ShaderMaterial({
+    //   vertexShader: `
+    //   varying vec2 vUv;
+    //   void main() {
+    //     gl_Position = vec4(position, 1.);
+    //     vUv = uv;
+    //   }
+    //   `,
+    //   fragmentShader: `
+    //   varying vec2 vUv;
+    //   uniform sampler2D tDiffuse;
+    //   void main() {
+    //     gl_FragColor = texture2D(tDiffuse, vUv);
+    //     gl_FragColor.r = texture2D(tDiffuse, vUv + vec2(0.1, 0.)).r;
+    //   }
+    //   `,
+    //   uniforms: {
+    //     tDiffuse: this.uniform,
+    //   },
+    // });
+    // this.mask.swap();
+    // this.lumPP = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lumMat);
   }
 
   // setGodrays() {
@@ -156,6 +250,45 @@ export default class World {
   //    occlusionBox.layers.set( OCCLUSION_LAYER );
   //    scene.add( occlusionBox );
   // }
+
+  setGodrays() {
+    let renderPass = new RenderPass(this.scene, this.camera);
+
+    // let circleGeo = new THREE.CircleGeometry(10, 20);
+    // let circleMat = new THREE.MeshBasicMaterial({ color: 0xffccaa });
+    // let circle = new THREE.Mesh(circleGeo, circleMat);
+    // circle.position.set(35, 14.5, -90);
+    // this.scene.add(circle);
+
+    // let godraysEffect = new GodRaysEffect(this.camera, circle, {
+    //   resolutionScale: 1,
+    //   density: 0.8,
+    //   decay: 0.95,
+    //   weight: 0.5,
+    //   samples: 50,
+    // });
+
+    // const godRaysPass = new EffectPass(this.camera, godraysEffect);
+    // godRaysPass.renderToScreen = true;
+
+    this.composer = new EffectComposer(this.renderer);
+    // this.composer.addPass(renderPass);
+    // this.composer.addPass(godRaysPass);
+
+    const bloomEffect = new SelectiveBloomEffect(this.scene, this.camera, {
+      intensity: 4,
+    });
+    bloomEffect.selection.add(this.faScreen.mesh);
+    bloomEffect.selection.inverted = true;
+    bloomEffect.selection.exclusive = false;
+    bloomEffect.selection.clear();
+    bloomEffect.selection.toggle(this.faScreen.mesh);
+    console.log(bloomEffect.selection);
+    const bloomPass = new EffectPass(this.camera, bloomEffect);
+    bloomPass.renderToScreen = true;
+    this.composer.addPass(renderPass);
+    this.composer.addPass(bloomPass);
+  }
 
   onPreloaded() {
     this.isPreloaded = true;
@@ -176,10 +309,9 @@ export default class World {
   onChange({ url, push = true }) {
     if (url == this.template) return;
 
-    // console.log(url);
-
     this.previousTemplate = this.template;
     this.template = url;
+    console.log("TEMPLATE", this.template);
 
     if (push) {
       window.history.pushState({}, "", `${url}`);
@@ -193,7 +325,7 @@ export default class World {
       console.log("HERERE");
       this.screenTitles.toProjects();
       this.faScreen.toProjects();
-    } else if (this.template.includes("/projects/d")) {
+    } else if (this.template.includes("/projects/")) {
       console.log("NOT HEREER");
       this.screenTitles.toProjectDetail();
       this.faScreen.toProjectDetail();
@@ -388,27 +520,29 @@ export default class World {
     this.cameraWrapper.onPointermove();
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersect = this.raycaster.intersectObject(this.water.t);
-    if (intersect.length) {
-      const uv = intersect[0].uv;
+    if (this.water) {
+      const intersect = this.raycaster.intersectObject(this.water.t);
+      if (intersect.length) {
+        const uv = intersect[0].uv;
 
-      this.water && this.water.onPointermove(uv);
+        this.water && this.water.onPointermove(uv);
 
-      const pos = intersect[0].point;
-      this.lights.pointerLight.position.copy(pos);
-      this.lights.pointerLight.position.z += 0.5;
+        const pos = intersect[0].point;
+        this.lights.pointerLight.position.copy(pos);
+        this.lights.pointerLight.position.z += 0.5;
+      }
     }
     this.faScreen && this.faScreen.onPointermove();
     this.screenTitles && this.screenTitles.onPointermove();
   }
 
   onMousedown() {
-    this.water.buffer.onMousedown();
+    this.water && this.water.buffer.onMousedown();
     this.faScreen && this.faScreen.onPointerdown();
     this.screenTitles && this.screenTitles.onPointerdown();
   }
   onMouseup() {
-    this.water.buffer.onMouseup();
+    this.water && this.water.buffer.onMouseup();
   }
   onWheel(event) {
     this.screenTitles && this.screenTitles.onWheel(event.deltaY);
@@ -425,7 +559,7 @@ export default class World {
 
     this.faScreen && this.faScreen.onResize();
     this.screenTitles && this.screenTitles.onResize();
-    this.screen && this.screen.onResize();
+    // this.screen && this.screen.onResize();
   }
 
   addListeners() {
@@ -454,14 +588,19 @@ export default class World {
     // this.updateRandonObjects();
   }
 
+  renderBloom() {
+    this.camera.layers.set(1);
+    this.bloomComposer.render();
+    this.camera.layers.set(0);
+    this.finalComposer.render();
+  }
+
   render() {
     let delta = 0.01633;
     this.time += delta;
     this.update(delta);
     this.renderer.render(this.scene, this.camera);
-
-    // this.update(delta);
-    // this.composer.render();
+    // this.renderBloom();
 
     // this.renderer.setRenderTarget(this.mask.write);
     // this.update(delta);
@@ -472,13 +611,12 @@ export default class World {
     // this.screenTitles && this.screenTitles.update();
     // this.renderer.render(this.lumPP, this.camera);
 
-    // this.camera.layers.set(1);
-    // this.composer.render();
-
-    // this.renderer.clearDepth();
     // this.camera.layers.set(0);
     // this.update(delta);
     // this.renderer.render(this.scene, this.camera);
+    // this.camera.layers.set(1);
+    // // this.renderer.setClearColor(0x000000);
+    // // this.composer.render();
 
     window.requestAnimationFrame(this.render.bind(this));
   }
