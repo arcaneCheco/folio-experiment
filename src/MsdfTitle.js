@@ -4,6 +4,7 @@ import World from "./app2";
 // import fragmentShader from "./shaders/msdfTitle/fragment.glsl";
 import TextGeometryOGL from "./text/TextGeometryOGL";
 import font from "./text/Audiowide-Regular.json";
+// import font from "../fonts/magzetician/MagzeticianRegular.json";
 import vertexShader from "./shaders/msdfTitle2/vertex.glsl";
 import fragmentShader from "./shaders/msdfTitle2/fragment.glsl";
 import glitch3 from "./shaders/ac71v4Th40ry/assets/glitch3.jpeg";
@@ -33,6 +34,7 @@ export default class MsdfTitle {
       transparent: true,
       uniforms: {
         tMap: { value: this.textureLoader.load("Audiowide-Regular.ttf.png") },
+        // tMap: { value: this.textureLoader.load("maseticianTest.png") },
         uColor: { value: new THREE.Vector3(1, 1, 0) },
         uTextColor: { value: new THREE.Vector3(0.2, 0.4, 0.8) },
         uAlpha: { value: 0.5 },
@@ -46,8 +48,8 @@ export default class MsdfTitle {
         uStroke: { value: 0.2 },
         uPadding: { value: 0.22 },
       },
-      depthTest: false,
-      depthWrite: false,
+      // depthTest: false,
+      // depthWrite: false,
     });
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.mesh.renderOrder = 10000;

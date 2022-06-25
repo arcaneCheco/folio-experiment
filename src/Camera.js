@@ -21,8 +21,8 @@ export default class Camera {
 
     this.parallaxSettings = {
       lerp: 0.1,
-      magX: 0.2,
-      magY: 0.4,
+      magX: 0.1,
+      magY: 0.2,
     };
 
     this.cameraDebugFolder = this.world.debug.addFolder({
@@ -62,6 +62,16 @@ export default class Camera {
       max: 1,
       step: 0.001,
     });
+    this.cameraDebugFolder
+      .addInput(this.instance, "fov", {
+        min: 20,
+        max: 120,
+        step: 0.01,
+      })
+      .on("change", () => {
+        this.instance.updateProjectionMatrix();
+        // this.world.faScreen.onResize();
+      });
   }
 
   onPreloaded() {

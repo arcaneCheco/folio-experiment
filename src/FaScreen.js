@@ -2,6 +2,8 @@ import World from "./app2";
 import * as THREE from "three";
 import vertexFront from "./shaders/faScreen/front/vertex.glsl";
 import fragmentFront from "./shaders/faScreen/front/fragment.glsl";
+import vertexProjects from "./shaders/faScreen/projectsMaterial/vertex.glsl";
+import fragmentProjects from "./shaders/faScreen/projectsMaterial/fragment.glsl";
 import preVertexShader from "./shaders/preloader/vertex.glsl";
 import preFragmentShader from "./shaders/preloader/fragment.glsl";
 import { degToRad, clamp } from "three/src/math/MathUtils";
@@ -39,20 +41,37 @@ export default class FaScreen {
     this.setProjectsMaterial();
     // this.setPhysicalMat()
     this.setAboutMaterial();
+    this.setSizesTemp();
     this.onResize = this.onResizeLoading;
     this.update = this.updateLoading;
     this.scene.add(this.mesh);
+
+    this.debug = this.world.debug.addFolder({ title: "faScreen" });
+    this.debug.addInput(this.mesh, "position", {
+      picker: "inline",
+      expanded: true,
+      multiline: true,
+      x: {
+        min: -10,
+        max: 50,
+      },
+      y: {
+        min: -10,
+        max: 50,
+      },
+      z: {
+        min: -10,
+        max: 50,
+      },
+    });
   }
 
   onPreloaded() {
     this.onResize = this.onResizeLoaded;
 
-    console.log(this.world.resources.projectsData);
-
     this.projectTextures = this.world.resources.projectsData.map(
       (project) => project.texture
     );
-    console.log(this.projectTextures);
   }
 
   setGeometry() {
@@ -63,54 +82,6 @@ export default class FaScreen {
   }
 
   setMaterial() {
-    ///
-
-    const glowV = `
-    uniform vec3 viewVector;
-    uniform float c;
-    uniform float p;
-    varying float intensity;
-    void main() 
-    {
-        vec3 vNormal = normalize( normalMatrix * normal );
-      vec3 vNormel = normalize( normalMatrix * viewVector );
-      intensity = pow( c - dot(vNormal, vNormel), p );
-      
-        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-    }
-    `;
-    const glowF = `
-    uniform vec3 glowColor;
-    varying float intensity;
-    void main() 
-    {
-      vec3 glow = glowColor * intensity;
-        gl_FragColor = vec4( glow, 1.0 );
-    }
-    `;
-    const glowMat = new THREE.ShaderMaterial({
-      uniforms: {
-        c: { value: 0.5 },
-        p: { value: 4 },
-        glowColor: { value: new THREE.Color(0xffffff) },
-        viewVector: { value: this.world.camera.position },
-      },
-      vertexShader: glowV,
-      fragmentShader: glowF,
-      side: THREE.BackSide,
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-    });
-    const glowMesh = new THREE.Mesh(this.geometry, glowMat);
-    glowMesh.scale.multiplyScalar(12);
-    glowMesh.position.set(
-      0,
-      this.world.settings.screenPosY,
-      this.world.settings.screenPosZ
-    );
-    // this.scene.add(glowMesh);
-    ////
-
     this.defaultMaterial = new THREE.ShaderMaterial({
       vertexShader: `
         void main() {
@@ -119,7 +90,7 @@ export default class FaScreen {
       `,
       fragmentShader: `
         void main() {
-          gl_FragColor = vec4(0., 0., 0., 0.);
+          gl_FragColor = vec4(1., 1., 1., 1.);
         }
       `,
       wireframe: false,
@@ -306,64 +277,19 @@ export default class FaScreen {
 
   setProjectsMaterial() {
     this.projectsMaterial = new THREE.ShaderMaterial({
-      vertexShader: `
-        varying vec2 vUv;
-
-        void main() {
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
-          vUv = uv;
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D uTexture;
-        uniform float uThickness;
-        varying vec2 vUv;
-        const vec2 uAspect = vec2(16., 9.);
-
-        float border(vec2 uv, float thickness) {
-          float padding = 0.3;
-          float left = smoothstep(thickness*(1.0+padding)*uAspect.x, thickness*uAspect.x, uv.x) * smoothstep(0.0, thickness*padding*uAspect.x, uv.x);
-          float right = smoothstep(1.0-thickness*(1.0+padding)*uAspect.x, 1.0-thickness*uAspect.x, uv.x) * smoothstep(1.0, 1.0-thickness*padding*uAspect.x, uv.x);
-          float bottom = smoothstep(1.0-thickness*(1.0+padding)*uAspect.y, 1.0-thickness*uAspect.y, uv.y) * smoothstep(1.0, 1.0-thickness*padding*uAspect.y, uv.y);
-          float top = smoothstep(thickness*(1.0+padding)*uAspect.y, thickness*uAspect.y, uv.y) * smoothstep(0.0, thickness*padding*uAspect.y, uv.y);
-      
-          // Fade overlaps
-          left *= smoothstep(0.0, thickness*(1.0)*uAspect.y, uv.y) * smoothstep(1.0, 1.0-thickness*(1.0)*uAspect.y, uv.y);
-          right *= smoothstep(0.0, thickness*(1.0)*uAspect.y, uv.y) * smoothstep(1.0, 1.0-thickness*(1.0)*uAspect.y, uv.y);
-          bottom *= smoothstep(0.0, thickness*(1.0)*uAspect.x, uv.x) * smoothstep(1.0, 1.0-thickness*(1.0)*uAspect.x, uv.x);
-          top *= smoothstep(0.0, thickness*(1.0)*uAspect.x, uv.x) * smoothstep(1.0, 1.0-thickness*(1.0)*uAspect.x, uv.x);
-      
-          float lines = left+right+bottom+top;
-          return clamp(lines, 0.0, 1.0);
-      }
-
-        float edgeFactor(vec2 p){
-          // vec2 grid = abs(fract(p - 0.5) - 0.5) / fwidth(p) / uThickness;
-          vec2 cUv = p - vec2(0.5);
-          // cUv = p - vec2(0.5, 0.);
-          vec2 grid = abs(fract(cUv) - 0.5) / fwidth(p) / (uThickness * 100.);
-          // vec2 grid = abs(fract(cUv) - 0.5) / vec2(0.01) / (uThickness * 100.);
-          return min(grid.x, grid.y);
-        }
-
-        void main() {
-          float a = edgeFactor(vUv);
-          float alpha = border(vUv, 0.1);
-          vec4 image = texture2D(uTexture, vUv);
-          vec3 edgeCol = mix(image.rgb, vec3(0.), a);
-          gl_FragColor = vec4(image.rgb + edgeCol, 1.);
-          gl_FragColor = image;
-          gl_FragColor.a = alpha;
-        }
-      `,
+      vertexShader: vertexProjects,
+      fragmentShader: fragmentProjects,
       uniforms: {
         uTexture: {
           value: null,
         },
         uThickness: { value: 0.1 },
+        uDarken: { value: 1 },
+        uTime: { value: 0 },
       },
       // depthTest: false,
       // depthWrite: false,
+      transparent: true,
     });
     // this.projectsMaterial = this.defaultMaterial;
   }
@@ -385,6 +311,8 @@ export default class FaScreen {
 
   setMesh() {
     this.mesh = new THREE.Mesh(this.geometry, this.material);
+    this.material.depthTest = true;
+    this.material.depthWrite = true;
     this.mesh.renderOrder = -1000;
 
     // const lensflare = new Lensflare();
@@ -439,41 +367,121 @@ export default class FaScreen {
     }
   }
 
-  onChange() {
-    // const template = this.world.template;
-    // if (template === "/") {
-    // }
+  setSizesTemp() {
+    this.fromMonitorSizes = {
+      loading: {
+        default: new THREE.Vector3(
+          window.innerWidth * 0.3,
+          window.innerWidth * 0.3,
+          window.innerWidth * 0.3
+        ),
+        700: new THREE.Vector3(
+          window.innerWidth * 0.5,
+          window.innerWidth * 0.5,
+          window.innerWidth * 0.5
+        ),
+      },
+      home: {},
+      projects: {
+        default: new THREE.Vector3(
+          window.innerWidth * 0.3,
+          window.innerWidth * 0.3 * (9 / 16),
+          0.01
+        ),
+        700: new THREE.Vector3(
+          window.innerWidth * 0.5,
+          window.innerWidth * 0.5 * (9 / 16),
+          0.01
+        ),
+      },
+      projectDetail: {
+        default: new THREE.Vector3(
+          window.innerWidth * 0.75,
+          window.innerWidth * 0.75 * (9 / 16)
+        ),
+        700: new THREE.Vector3(
+          window.innerWidth * 0.9,
+          window.innerHeight * 0.9,
+          0.001
+        ),
+        // 700: new THREE.Vector3(window.innerWidth, window.innerHeight, 0.001),
+      },
+      about: {},
+    };
   }
 
   onResizeLoading() {
-    this.mesh.position.set(
-      0,
-      this.world.settings.screenPosY,
-      this.world.settings.screenPosZ
-    );
+    const size = 10;
+    this.mesh.position.set(0, size * 0.5 + 2, this.world.settings.screenPosZ);
     this.mesh.scale.set(10, 10, 10);
   }
 
   onResizeLoaded() {
     this.objectAspect = 16 / 9;
+    const size = 20;
     this.screenAspect = this.world.resolutionX / this.world.resolutionY;
 
-    this.mesh.position.set(
-      0,
-      this.world.settings.screenPosY,
-      this.world.settings.screenPosZ
-    );
+    this.mesh.position.set(0, size * 0.5 + 2, this.world.settings.screenPosZ);
     this.mesh.scale.set(
-      this.world.settings.screenScale,
       this.world.settings.screenScale * this.objectAspect,
-      this.world.settings.screenScale
+      size,
+      0.1
     );
+  }
+
+  onResizeProjects() {
+    this.setSizesTemp();
+    const monitorSize =
+      this.fromMonitorSizes.projects[
+        window.innerWidth < 700 ? "700" : "default"
+      ];
+    this.onResizeCommon();
+    this.setDistanceToCamera();
+    this.setPixelSize();
+    this.mesh.scale.x = this.pixelSize * monitorSize.x;
+    this.mesh.scale.y = this.pixelSize * monitorSize.y;
+    // mesh is 2 units above water and in the middle of the screen
+    let heightAboveWater = 2;
+    this.world.camera.position.y = heightAboveWater + this.mesh.scale.y / 2;
+    this.mesh.position.y = this.world.camera.position.y;
+  }
+
+  onResizeProjectDetails() {
+    this.setSizesTemp();
+    const monitorSize =
+      this.fromMonitorSizes.projectDetail[
+        window.innerWidth < 700 ? "700" : "default"
+      ];
+    this.onResizeCommon();
+    this.setDistanceToCamera();
+    this.setPixelSize();
+    this.mesh.scale.x = this.pixelSize * monitorSize.x;
+    this.mesh.scale.y = this.pixelSize * monitorSize.y;
+    // mesh is 2 units above water and in the middle of the screen
+    let heightAboveWater = -2;
+    this.world.camera.position.y = heightAboveWater + this.mesh.scale.y / 2;
+    this.mesh.position.y = this.world.camera.position.y;
+  }
+
+  onResizeCommon() {
+    this.heightDepthRatio = Math.tan(degToRad(this.world.camera.fov / 2));
+    this.waterLevel = this.world.camera.position.y / this.heightDepthRatio;
+  }
+
+  setDistanceToCamera() {
+    this.distanceToCamera = this.world.camera.position.z - this.mesh.position.z;
+  }
+
+  setPixelSize() {
+    this.pixelSize =
+      (2 * this.heightDepthRatio * this.distanceToCamera) / window.innerHeight;
   }
 
   onResize() {}
 
   updateCommon() {
     this.time = this.world.time;
+    this.projectsMaterial.uniforms.uTime.value = this.time;
   }
 
   updateLoading() {
@@ -491,9 +499,13 @@ export default class FaScreen {
     // this.mesh.rotation.y += Math.sin(this.time * 0.001);
   }
 
-  updateProjects() {}
+  updateProjects() {
+    this.updateCommon();
+  }
 
-  updateProjectDetail() {}
+  updateProjectDetail() {
+    this.updateCommon();
+  }
 
   updateAbout() {}
 
@@ -528,19 +540,43 @@ export default class FaScreen {
   }
 
   toProjects() {
+    /*********set scale/position targets */
+    this.setSizesTemp();
+    const monitorSize =
+      this.fromMonitorSizes.projects[
+        window.innerWidth < 700 ? "700" : "default"
+      ];
+    this.onResizeCommon();
+    this.setDistanceToCamera();
+    this.setPixelSize();
+    this.scaleTarget = new THREE.Vector3(
+      this.pixelSize * monitorSize.x,
+      this.pixelSize * monitorSize.y,
+      0.001
+    );
+    // mesh is 2 units above water and in the middle of the screen
+    let heightAboveWater = 2;
+    this.yPositionTarget = heightAboveWater + this.scaleTarget.y / 2;
+    /*************** */
+    this.onResize = this.onResizeProjects;
+    // this.onResize = this.resizeToFullScreen;
     GSAP.to(this.mesh.rotation, {
       x: 0,
       y: 0,
       duration: 1,
     });
     GSAP.to(this.mesh.scale, {
-      x: (20 * 16) / 9,
-      y: 20,
-      z: 3,
+      x: this.scaleTarget.x,
+      y: this.scaleTarget.y,
+      z: this.scaleTarget.z,
       duration: 1,
     });
     GSAP.to(this.mesh.position, {
-      z: 0,
+      y: this.yPositionTarget,
+      duration: 1,
+    });
+    GSAP.to(this.world.camera.position, {
+      y: this.yPositionTarget,
       duration: 1,
     });
     this.update = this.updateProjects;
@@ -548,8 +584,31 @@ export default class FaScreen {
   }
 
   toProjectDetail() {
+    /*********set scale/position targets */
+    this.setSizesTemp();
+    const monitorSize =
+      this.fromMonitorSizes.projectDetail[
+        window.innerWidth < 700 ? "700" : "default"
+      ];
+    this.onResizeCommon();
+    this.setDistanceToCamera();
+    this.setPixelSize();
+    this.scaleTarget = new THREE.Vector3(
+      this.pixelSize * monitorSize.x,
+      this.pixelSize * monitorSize.y,
+      0.001
+    );
+    // mesh is 2 units above water and in the middle of the screen
+    let heightAboveWater = -2;
+    this.yPositionTarget = heightAboveWater + this.scaleTarget.y / 2;
+    /*************** */
+    this.onResize = this.onResizeProjectDetails;
     GSAP.to(this.mesh.position, {
-      z: 20,
+      y: this.yPositionTarget,
+      duration: 1,
+    });
+    GSAP.to(this.world.camera.position, {
+      y: this.yPositionTarget,
       duration: 1,
     });
     GSAP.to(this.mesh.rotation, {
@@ -558,9 +617,7 @@ export default class FaScreen {
       duration: 1,
     });
     GSAP.to(this.mesh.scale, {
-      x: (20 * 16) / 9,
-      y: 20,
-      z: 3,
+      ...this.scaleTarget,
       duration: 1,
     });
     this.material[4] = this.projectsMaterial;

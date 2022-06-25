@@ -25,7 +25,11 @@ export class Water {
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.rotation.x = -Math.PI / 2;
     this.mesh.position.copy(this.waterPosition);
+    // this.mesh.receiveShadow = true;
     this.scene.add(this.mesh);
+    this.material.depthTest = true;
+    this.material.depthWrite = true;
+    this.mesh.renderOrder = 10000000000;
 
     this.reflector = new ReflectionBuffer(geometry, this.material, this.mesh);
 
@@ -34,6 +38,7 @@ export class Water {
       this.reflector.textureMatrix;
 
     this.setRaycastPlane();
+    this.setDummyToBlockBloomBelowWater();
   }
 
   setMaterial() {
@@ -51,16 +56,17 @@ export class Water {
       ]),
       vertexShader: v,
       fragmentShader: THREE.ShaderChunk["meshphong_frag"],
-      //   wireframe: true,
+      wireframe: false,
+      lights: true,
+      // shadowSide: THREE.DoubleSide,
     });
-    this.material.lights = true;
 
     // Material attributes from THREE.MeshPhongMaterial
-    // this.material.color = new THREE.Color(0xff0000);
-    // this.material.color = new THREE.Color(0x0040c0);
-    this.material.color = new THREE.Color(0xffffff);
+    this.material.color = new THREE.Color(0xff0000);
+    this.material.color = new THREE.Color(0x0040c0);
+    // this.material.color = new THREE.Color(0xffffff);
     this.material.specular = new THREE.Color(0x11ffff);
-    this.material.specular = new THREE.Color(0x00ffff);
+    this.material.specular = new THREE.Color(0x00ff55);
     this.material.shininess = 50;
 
     // Sets the uniforms with the material values
@@ -110,6 +116,17 @@ export class Water {
     this.scene.add(this.t);
   }
 
+  setDummyToBlockBloomBelowWater() {
+    this.blockBloomDummy = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ visible: false, color: 0x000000 })
+    );
+    this.blockBloomDummy.rotation.x = -Math.PI / 2;
+    this.blockBloomDummy.position.copy(this.waterPosition);
+    this.blockBloomDummy.layers.enable(1);
+    this.scene.add(this.blockBloomDummy);
+  }
+
   onPointermove(uv) {
     this.buffer.onPointermove(uv);
   }
@@ -118,6 +135,7 @@ export class Water {
     const s = this.world.settings.environmentSize;
     this.mesh.scale.set(s, s, 1);
     this.t.scale.set(s, s, 1);
+    this.blockBloomDummy.scale.set(s, s, 1);
     this.reflector.onResize(s);
 
     this.buffer.resize(this.world.resolutionX, this.world.resolutionY);

@@ -83,7 +83,7 @@ export default class Lights {
 
     this.debug = this.world.debug.addFolder({
       title: "lights",
-      expanded: true,
+      expanded: false,
     });
     this.debug.addInput(this.ambinet, "intensity", {
       min: 0,
@@ -95,7 +95,9 @@ export default class Lights {
       max: 4,
       label: "pointerLight intensity",
     });
-    this.moonLightDebug = this.debug.addFolder({ title: "moonLight" });
+    this.moonLightDebug = this.debug.addFolder({
+      title: "moonLight",
+    });
     this.moonLightDebug.addInput(this.sun4, "intensity", {
       min: 0,
       max: 8,

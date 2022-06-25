@@ -18,6 +18,10 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
+import { FilmPass } from "three/examples/jsm/postprocessing/FilmPass";
+import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass";
+import { LuminosityShader } from "three/examples/jsm/shaders/LuminosityShader";
+import finalEffectFragment from "./shaders/post/finalEffect.glsl";
 // import * as POST from "postprocessing";
 // import { BloomEffect, EffectComposer, EffectPass, RenderPass, SelectiveBloomEffect } from "postprocessing";
 // import {
@@ -68,6 +72,7 @@ export default class World {
     this.setSky();
     this.setWater();
     this.setScreenTitles();
+    this.setProjectDetail();
     this.resources = new Resources();
     this.onResize();
     // this.setPost();
@@ -78,12 +83,12 @@ export default class World {
   }
 
   setSelectiveBloom() {
-    this.materials = {};
-    this.darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
     const BLOOM_SCENE = 1;
     this.bloomLayer = new THREE.Layers();
     this.bloomLayer.set(BLOOM_SCENE);
     this.faScreen.mesh.layers.enable(BLOOM_SCENE);
+    // this.screenTitles.group.layers.enable(BLOOM_SCENE);
+    // this.screenTitles.titles.map((mesh) => mesh.layers.enable(BLOOM_SCENE));
 
     // render-pass
     this.renderPass = new RenderPass(this.scene, this.camera);
@@ -91,30 +96,30 @@ export default class World {
     this.bloomComposer = new EffectComposer(this.renderer);
     this.bloomComposer.renderToScreen = false;
     this.bloomComposer.addPass(this.renderPass);
-    const res = 1;
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth * res, window.innerHeight * res),
-      1.5,
-      0.4,
-      0.85
-    );
-    bloomPass.threshold = 0;
-    bloomPass.strength = 5;
-    bloomPass.radius = 0;
+    const res = 0.5;
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(100, 100), 1, 0, 0);
+    this.bloomPass.threshold = 0;
+    this.bloomPass.strength = 4;
+    this.bloomPass.radius = 0;
+    this.bloomPass.needsSwap = true;
     this.exposure = 0;
-    this.bloomComposer.addPass(bloomPass);
+    this.bloomComposer.addPass(this.bloomPass);
+    this.bloomComposer.setSize(
+      window.innerWidth * res,
+      window.innerHeight * res
+    );
 
-    this.debug.addInput(bloomPass, "strength", {
+    this.debug.addInput(this.bloomPass, "strength", {
       min: 0,
-      max: 3,
+      max: 6,
       step: 0.01,
     });
-    this.debug.addInput(bloomPass, "threshold", {
+    this.debug.addInput(this.bloomPass, "threshold", {
       min: 0,
       max: 1,
       step: 0.01,
     });
-    this.debug.addInput(bloomPass, "radius", {
+    this.debug.addInput(this.bloomPass, "radius", {
       min: 0,
       max: 50,
       step: 0.01,
@@ -130,14 +135,85 @@ export default class World {
         () => (this.renderer.toneMappingExposure = Math.pow(this.exposure, 4.0))
       );
 
+    const lumPass = new ShaderPass(LuminosityShader, "tDiffuse");
+    // this.bloomComposer.addPass(lumPass);
+
+    // probably need blending or blur to make this work
+    const customBloomEffect = new THREE.ShaderMaterial({
+      uniforms: {
+        tDiffuse: { value: null },
+        lightPos: { value: new THREE.Vector2(0.5, 0.5) },
+        fExposure: { value: 10 },
+        fDecay: { value: 0.3 },
+        fDensity: { value: 0.6 },
+        fWeight: { value: 1.5 },
+        fClamp: { value: 10 },
+      },
+      vertexShader: `
+      varying vec2 vUv;
+    		void main() {
+    			vUv = uv;
+    			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    		}`,
+      fragmentShader: `
+        uniform vec2 lightPos;
+        uniform float fExposure;
+        uniform float fDecay;
+        uniform float fDensity;
+        uniform float fWeight;
+        uniform float fClamp;
+        uniform sampler2D tDiffuse;
+        varying vec2 vUv;
+
+        const int iSamples = 20;
+
+        void main() {
+          vec2 deltaTextCoord = vUv - lightPos;
+          deltaTextCoord *= 1.0  / float(iSamples) * fDensity;
+          vec2 coord = vUv;
+      
+          float illuminationDecay = 1.0;
+          vec4 color = vec4(0.0);
+      
+          for (int i = 0; i < iSamples; i++) {
+              coord -= deltaTextCoord;
+              vec4 texel = texture2D(tDiffuse, coord);
+              texel *= illuminationDecay * fWeight;
+      
+              color += texel;
+              illuminationDecay *= fDecay;
+          }
+      
+          color *= fExposure;
+          color = clamp(color, 0.0, fClamp);
+          gl_FragColor = color;
+        }
+      `,
+      defines: {},
+      depthTest: true,
+      depthWrite: true,
+    });
+    const customBloomPass = new ShaderPass(customBloomEffect, "tDiffuse");
+    // this.bloomComposer.addPass(customBloomPass);
+
+    /////////
+    // this.textComopser = new EffectComposer(this.renderer)
+    // this.filmPass = new FilmPass();
+    // this.textComopser.addPass(this.renderPass)
+    // this.textComopser.addPass(this.filmPass)
+    // this.bloomComposer.addPass(this.filmPass);
+    /////////
+
     // final
     this.finalComposer = new EffectComposer(this.renderer);
+    this.finalComposer.setSize(window.innerWidth, window.innerHeight);
     this.finalComposer.addPass(this.renderPass);
 
     this.finalEffect = new THREE.ShaderMaterial({
       uniforms: {
         baseTexture: { value: null },
         bloomTexture: { value: this.bloomComposer.renderTarget2.texture },
+        uTime: { value: 0 },
       },
       vertexShader: `
       varying vec2 vUv;
@@ -149,22 +225,22 @@ export default class World {
     			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 
     		}`,
-      fragmentShader: `
-            uniform sampler2D baseTexture;
-    		uniform sampler2D bloomTexture;
-
-    		varying vec2 vUv;
-
-    		void main() {
-
-    			gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
-    		}`,
+      fragmentShader: finalEffectFragment,
       defines: {},
+    });
+
+    const bokehPass = new BokehPass(this.scene, this.camera, {
+      focus: 2,
+      maxblur: 0.005,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      aperture: 1,
     });
 
     const finalPass = new ShaderPass(this.finalEffect, "baseTexture");
     finalPass.needsSwap = true;
     this.finalComposer.addPass(finalPass);
+    // this.finalComposer.addPass(bokehPass);
   }
 
   setPost() {
@@ -295,15 +371,20 @@ export default class World {
     this.cameraWrapper.onPreloaded();
     this.faScreen && this.faScreen.onPreloaded();
     this.screenTitles && this.screenTitles.onPreloaded();
+    this.screenTitles.group.layers.enable(1);
+    this.screenTitles.titles.map((mesh) => mesh.layers.enable(1));
     this.setNavigation();
     // this.addListeners();
     console.log(window.location);
     this.onChange({
-      url:
-        window.location.pathname === "/"
-          ? window.location.pathname
-          : window.location.pathname.slice(0, -1),
+      url: window.location.pathname,
     });
+    // this.onChange({
+    //   url:
+    //     window.location.pathname === "/"
+    //       ? window.location.pathname
+    //       : window.location.pathname.slice(0, -1),
+    // });
   }
 
   onChange({ url, push = true }) {
@@ -317,7 +398,9 @@ export default class World {
       window.history.pushState({}, "", `${url}`);
     }
 
-    if (this.template === "/") {
+    this.projectDetail.hide();
+
+    if (this.template === "") {
       this.screenTitles.toHome();
       this.faScreen.toHome();
     } else if (this.template === "/projects") {
@@ -329,6 +412,7 @@ export default class World {
       console.log("NOT HEREER");
       this.screenTitles.toProjectDetail();
       this.faScreen.toProjectDetail();
+      this.projectDetail.show();
     } else if (this.template === "/about") {
       this.screenTitles.toAbout();
       this.faScreen.toAbout();
@@ -345,7 +429,7 @@ export default class World {
       baselineFOV: 45,
       screenPosZ: 20,
       screenPosY: 10,
-      screenScale: 16,
+      screenScale: 20,
       route: "/",
       duringPreload: {
         cameraZ: 70,
@@ -534,12 +618,16 @@ export default class World {
     }
     this.faScreen && this.faScreen.onPointermove();
     this.screenTitles && this.screenTitles.onPointermove();
+    this.projectDetail &&
+      this.template.includes("/projects/") &&
+      this.projectDetail.onPointermove();
   }
 
   onMousedown() {
     this.water && this.water.buffer.onMousedown();
     this.faScreen && this.faScreen.onPointerdown();
     this.screenTitles && this.screenTitles.onPointerdown();
+    this.projectDetail ** this.projectDetail.onPointerdown();
   }
   onMouseup() {
     this.water && this.water.buffer.onMouseup();
@@ -579,19 +667,30 @@ export default class World {
   }
 
   update(delta) {
+    this.cameraWrapper.update();
     this.water && this.water.update(delta);
     this.sky && this.sky.update();
     this.screenTitles && this.screenTitles.update();
     this.faScreen && this.faScreen.update();
-    this.cameraWrapper.update();
 
     // this.updateRandonObjects();
   }
 
   renderBloom() {
+    this.finalEffect.uniforms.uTime.value = this.time;
     this.camera.layers.set(1);
+    this.faScreen.projectsMaterial.uniforms.uDarken.value = 0;
+    this.water.blockBloomDummy.material.visible = true;
+    // this.bloomPass.strength = 4;
     this.bloomComposer.render();
+
+    // this.camera.layers.set(2);
+    // this.bloomPass.strength = 1;
+    // this.bloomComposer.render();
+
     this.camera.layers.set(0);
+    this.faScreen.projectsMaterial.uniforms.uDarken.value = 1;
+    this.water.blockBloomDummy.material.visible = false;
     this.finalComposer.render();
   }
 
@@ -599,8 +698,8 @@ export default class World {
     let delta = 0.01633;
     this.time += delta;
     this.update(delta);
-    this.renderer.render(this.scene, this.camera);
-    // this.renderBloom();
+    // this.renderer.render(this.scene, this.camera);
+    this.renderBloom();
 
     // this.renderer.setRenderTarget(this.mask.write);
     // this.update(delta);

@@ -100,6 +100,22 @@ float cnoise(vec2 v) {
 }
 /****simplenoise*****/
 
+vec3 rgb2hsv(vec3 c) {
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+    
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 uniform sampler2D tMap;
 uniform sampler2D tMask;
 uniform vec3 uColor;
@@ -113,8 +129,22 @@ uniform float uTime;
 varying vec2 vUv;
 varying vec2 pUv;
 
+/****tv static*****/
+const float e = 2.7182818284590452353602874713527;
+
+float tvNoise(vec2 texCoord)
+{
+    float G = e + (uTime * 4.1);
+    vec2 r = (G * sin(G * texCoord.xy));
+    return fract(r.x * r.y * (1.0 + texCoord.x));
+}
+/****tv static*****/
+
 void main() {
     float fill = msdf(tMap, vUv);
+    float tvStatic = tvNoise(vUv);
+    // fill = mix(fill, tvStatic, 0.5);
+    // fill += tvStatic;
     float stroke = strokemsdf(tMap, vUv, uStroke, uPadding);
 
     float hover = crange(uHover, 0.0, 1.0, 0.05, 0.9);
@@ -123,11 +153,20 @@ void main() {
     alpha *= crange(uHover, 0.0, 1.0, 0.75, 1.0);
 
     // float uTransition = sin(uTime) + 1.5;
-    // // alpha *= animateLevels(texture2D(tMask, (gl_FragCoord.xy / uResoultion) * 3.0).r, uTransition);
+    // alpha *= animateLevels(texture2D(tMask, (gl_FragCoord.xy / uResoultion) * 3.0).r, uTransition);
     // alpha *= animateLevels(texture2D(tMask, pUv * 1.0).r, uTransition);
 
+    float t = uTime * 0.5;
+    float flicker = sin(t*10.0)*sin(t*20.0)*sin(t*4.0)*uHover;
+    vec3 color = vec3(0.06);
+    // color = rgb2hsv(color);
+    // float flickerStrength = 0.01;
+    // color.x += flicker*flickerStrength;
+    // color.z += flicker*flickerStrength;
+    // color = hsv2rgb(color);
+
     // vec2 screenUV = gl_FragCoord.xy / uResoultion;
-    // // screenUV = pUv;
+    // screenUV = pUv;
     // float uNoiseScale = 5000.;
     // float uNoiseSpeed = 0.5;
     // float noise = cnoise(vec3(screenUV*uNoiseScale + .4324, uTime*uNoiseSpeed*0.3 + .345));
@@ -135,7 +174,7 @@ void main() {
     // float noiseOver = cnoise(vec3(screenUV*uNoiseScale*10., uTime*uNoiseSpeed*.7)) * uHover;
 
     // vec3 color = uColor;
-    // color = vec3(0.2);
+    // color = vec3(0.);
     // // color.b = step(0.5, uHover);
 
     // vec3 uColor1 = vec3(0.15, .3, .85);
@@ -144,7 +183,7 @@ void main() {
     // color = mix(color, uColor2, clamp(noise_2, 0., 1.));
     // color = mix(color, vec3(1.), clamp(noiseOver, 0., 1.));
 
-    gl_FragColor = vec4(vec3(0.5), fill);
-    // gl_FragColor = vec4(color, alpha);
+    // gl_FragColor = vec4(vec3(0.1), alpha);
+    gl_FragColor = vec4(color, alpha);
     // gl_FragColor = vec4(pUv.x, pUv.y, 0., 1.);
 }

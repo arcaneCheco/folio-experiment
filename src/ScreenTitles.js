@@ -46,6 +46,12 @@ export default class ScreenTitles {
   }
 
   onPreloaded() {
+    console.log("hello1");
+    if (window.location.pathname.includes("/projects/")) {
+      console.log("hello2");
+      const [projectName] = window.location.pathname.split("/").slice(-1);
+      console.log(projectName);
+    }
     this.projectsData = this.world.resources.projectsData;
     this.setMesh();
     this.setTouchPlanes();
@@ -133,6 +139,7 @@ export default class ScreenTitles {
     this.activeProject = index;
     this.materials[this.activeProject].uniforms.uHover.value = true;
     this.world.faScreen.updateActiveProject(index);
+    console.log(this.activeProject, "YOOYOO");
   }
 
   checkIntersect() {
