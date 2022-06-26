@@ -1,26 +1,53 @@
-import World from "./app2";
+import World, { Template } from "./app2";
 import * as THREE from "three";
 import vertexFront from "./shaders/faScreen/front/vertex.glsl";
 import fragmentFront from "./shaders/faScreen/front/fragment.glsl";
 import vertexProjects from "./shaders/faScreen/projectsMaterial/vertex.glsl";
 import fragmentProjects from "./shaders/faScreen/projectsMaterial/fragment.glsl";
-import preVertexShader from "./shaders/preloader/vertex.glsl";
-import preFragmentShader from "./shaders/preloader/fragment.glsl";
-import { degToRad, clamp } from "three/src/math/MathUtils";
+import { degToRad } from "three/src/math/MathUtils";
 import GSAP from "gsap";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 // import hdrSource from "./empty_warehouse_01_2k.hdr";
-import normalIng from "./normal.jpg";
-import {
-  Lensflare,
-  LensflareElement,
-} from "three/examples/jsm/objects/Lensflare";
-import lensflare0 from "./lensflareTextures/lensflare0.png";
-import lensflare2 from "./lensflareTextures/lensflare2.png";
-import lensflare3 from "./lensflareTextures/lensflare3.png";
+// import {
+//   Lensflare,
+//   LensflareElement,
+// } from "three/examples/jsm/objects/Lensflare";
+// import lensflare0 from "./lensflareTextures/lensflare0.png";
+// import lensflare2 from "./lensflareTextures/lensflare2.png";
+// import lensflare3 from "./lensflareTextures/lensflare3.png";
 
 export default class FaScreen {
+  world;
+  scene;
+  raycaster;
+  hover;
+  mesh: any;
+  debug: any;
+  defaultMaterial: any;
+  material: any;
+  homeMaterial: any;
+  defaultMatOptions: any;
+  debugPhysicsMat: any;
+  projectTextures: any;
+  nScale: any;
+  clearcoatNScale: any;
+  projectsMaterial: any;
+  aboutMaterial: any;
+  geometry: any;
+  fromMonitorSizes: any;
+  objectAspect: any;
+  screenAspect: any;
+  pixelSize: any;
+  distanceToCamera: any;
+  heightDepthRatio: any;
+  waterLevel: any;
+  time: any;
+  scaleTarget: any;
+  yPositionTarget: any;
+  sideMaterial: any;
+  backMaterial: any;
+  frontMaterial: any;
   constructor() {
     this.world = new World();
     this.scene = this.world.scene;
@@ -70,7 +97,7 @@ export default class FaScreen {
     this.onResize = this.onResizeLoaded;
 
     this.projectTextures = this.world.resources.projectsData.map(
-      (project) => project.texture
+      (project: any) => project.texture
     );
   }
 
@@ -120,7 +147,7 @@ export default class FaScreen {
       attenuationDistance: 0,
       clearcoat: 0,
       clearcoatMap: null,
-      clearcoatNormalMap: this.world.textureLoader.load(normalIng),
+      clearcoatNormalMap: this.world.textureLoader.load("normal.jpg"),
       clearcoatNormalScale: new THREE.Vector2(0.3),
     };
     this.defaultMaterial = new THREE.MeshPhysicalMaterial({
@@ -129,14 +156,13 @@ export default class FaScreen {
       metalness: 0,
       roughness: 0.56,
       transmission: 1,
-      thickness: 0.5,
       envMap: hdrEquirect,
       envMapIntensity: 1.5,
       clearcoat: 1,
       clearcoatRoughness: 0.1,
       normalScale: new THREE.Vector2(1),
-      normalMap: this.world.textureLoader.load(normalIng),
-      clearcoatNormalMap: this.world.textureLoader.load(normalIng),
+      normalMap: this.world.textureLoader.load("normal.jpg"),
+      clearcoatNormalMap: this.world.textureLoader.load("normal.jpg"),
       clearcoatNormalScale: new THREE.Vector2(0.3),
       reflectivity: 0.5,
       ior: 1.5,
@@ -341,7 +367,10 @@ export default class FaScreen {
   }
 
   onPointermove() {
-    if (this.world.template !== "/" && this.world.template !== "/projects")
+    if (
+      this.world.template !== Template.Home &&
+      this.world.template !== Template.Projects
+    )
       return;
     const intersect = this.raycaster.intersectObject(this.mesh);
     if (intersect.length) {
@@ -355,14 +384,14 @@ export default class FaScreen {
     if (this.hover) {
       const currentRoute = this.world.template;
       console.log("efhefe", currentRoute);
-      if (currentRoute === "/") {
+      if (currentRoute === Template.Home) {
         console.log("LETSGO");
-        this.world.onChange({ url: "/projects" });
-      } else if (currentRoute === "/projects") {
+        this.world.onChange({ template: Template.Projects });
+      } else if (currentRoute === Template.Projects) {
         console.log("NOPE");
         const path =
           this.world.screenTitles.paths[this.world.screenTitles.activeProject];
-        this.world.onChange({ url: path });
+        this.world.onChange({ template: path }); // I think might need to be converted but might be better to move that logic somewhere else
       }
     }
   }
@@ -513,7 +542,7 @@ export default class FaScreen {
 
   updateLoaded() {}
 
-  updateActiveProject(index) {
+  updateActiveProject(index: any) {
     this.projectsMaterial.uniforms.uTexture.value = this.projectTextures[index];
     // this.projectsMaterial.map = this.projectTextures[index];
   }

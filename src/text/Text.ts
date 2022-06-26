@@ -1,4 +1,34 @@
+export interface TextProps {
+  font: any;
+  text: String;
+  size?: number;
+  letterSpacing?: number;
+  wordSpacing?: number;
+  wordBreak?: Boolean;
+  lineWidth?: Number;
+  align?: "left" | "center" | "right";
+  lineHeight?: number;
+}
+
 export default class Text {
+  font;
+  text;
+  size;
+  letterSpacing;
+  wordSpacing;
+  wordBreak;
+  lineWidth;
+  align;
+  lineHeight;
+  newline;
+  whitespace;
+  glyphs: any;
+  scale: any;
+  buffers: any;
+  lines: any;
+  numLines: any;
+  height: any;
+  width: any;
   constructor({
     font,
     text,
@@ -9,7 +39,7 @@ export default class Text {
     lineWidth = Infinity,
     align = "left",
     lineHeight = 1.4,
-  }) {
+  }: TextProps) {
     this.font = font;
     this.text = text;
     this.size = size;
@@ -31,7 +61,7 @@ export default class Text {
 
   parseFont() {
     this.glyphs = {};
-    this.font.chars.forEach((d) => (this.glyphs[d.char] = d));
+    this.font.chars.forEach((d: any) => (this.glyphs[d.char] = d));
   }
 
   createGeometry() {
@@ -170,7 +200,7 @@ export default class Text {
     if (!line.width) this.lines.pop();
   }
 
-  getKernPairOffset(id1, id2) {
+  getKernPairOffset(id1: any, id2: any) {
     for (let i = 0; i < this.font.kernings.length; i++) {
       let k = this.font.kernings[i];
       if (k.first < id1) continue;
@@ -242,16 +272,16 @@ export default class Text {
     // _this.buffers = buffers;
     this.numLines = this.lines.length;
     this.height = this.numLines * this.size * this.lineHeight;
-    this.width = Math.max(...this.lines.map((line) => line.width));
+    this.width = Math.max(...this.lines.map((line: any) => line.width));
   }
 
-  onResize(width) {
+  onResize(width: any) {
     // this.width = width;
     this.layout();
     this.populateBuffers();
   }
 
-  update(text) {
+  update(text: any) {
     this.text = text;
     this.createGeometry();
     this.layout();
@@ -260,6 +290,8 @@ export default class Text {
 }
 
 class Line {
+  width;
+  glyphs: any;
   constructor() {
     this.width = 0;
     this.glyphs = [];

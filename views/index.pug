@@ -17,7 +17,10 @@ html(lang="en")
     include ./projectDetail.pug
     include ./screenDummy.pug
     #canvas
+    #debug
 
     script.
       window.PROJECTS = !{JSON.stringify(projects).replace(/<\//g, "<\\/")}
+    script.
+      window.FONTS = !{JSON.stringify(fonts).replace(/<\//g, "<\\/")}
     script(src="src/app2.js")

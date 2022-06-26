@@ -1,9 +1,14 @@
 import * as THREE from "three";
 import World from "./app2";
-import font from "./text/Audiowide-Regular.json";
 import TextGeometryOGL from "./text/TextGeometryOGL";
 
 export default class VisitButton {
+  world;
+  textureLoader;
+  scene;
+  geometry;
+  material;
+  mesh;
   constructor() {
     this.world = new World();
     this.textureLoader = this.world.textureLoader;
@@ -11,7 +16,7 @@ export default class VisitButton {
 
     this.geometry = new TextGeometryOGL();
     this.geometry.setText({
-      font,
+      font: this.world.resources.fontsData.audiowide.data,
       text: "Visit site",
       size: 1,
       letterSpacing: 0,
@@ -67,7 +72,11 @@ export default class VisitButton {
       `,
       transparent: true,
       uniforms: {
-        tMap: { value: this.textureLoader.load("Audiowide-Regular.ttf.png") },
+        tMap: {
+          value: this.textureLoader.load(
+            this.world.resources.fontsData.audiowide.url
+          ),
+        },
       },
       side: THREE.DoubleSide,
     });

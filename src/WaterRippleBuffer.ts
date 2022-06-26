@@ -18,6 +18,19 @@ import vertexShader from "./shaders/waterRipples/vertex.glsl";
 import fragmentShader from "./shaders/waterRipples/fragment.glsl";
 
 export default class WaterRippleBuffer {
+  world;
+  renderer;
+  camera;
+  masterScene;
+  uniform: any;
+  tMap: any;
+  scene;
+  textureLoader;
+  mouse;
+  needsUpdate;
+  mask: any;
+  uniforms: any;
+  mesh: any;
   constructor() {
     this.world = new World();
     this.renderer = this.world.renderer;
@@ -45,7 +58,7 @@ export default class WaterRippleBuffer {
     this.resize();
   }
 
-  setRenderTargets(size) {
+  setRenderTargets(size: any) {
     const options = {
       // minFilter: NearestMipMapNearestFilter,
       minFilter: LinearFilter,
@@ -90,7 +103,7 @@ export default class WaterRippleBuffer {
     this.scene.add(this.mesh);
   }
 
-  onPointermove(uv) {
+  onPointermove(uv: any) {
     this.needsUpdate = true;
     this.uniforms.u_mouse.value.z = 1;
     this.mouse.x = uv.x;
@@ -104,7 +117,7 @@ export default class WaterRippleBuffer {
     this.uniforms.u_mouse.value.z = 0;
   }
 
-  resize(w, h) {
+  resize(w?: any, h?: any) {
     this.uniforms.u_resolution.value.x = window.innerWidth;
     this.uniforms.u_resolution.value.y = window.innerHeight;
 
@@ -114,7 +127,7 @@ export default class WaterRippleBuffer {
     // this.mask.write.setSize(w, h);
   }
 
-  updateValues(delta) {
+  updateValues(delta: any) {
     this.uniforms.u_frame.value++;
     let beta = Math.random() * -1000;
     this.uniforms.u_time.value = beta + delta * 0.0005;

@@ -1,7 +1,20 @@
 import World from "./app2";
-import EventEmitter from "events";
+import { EventEmitter } from "events";
+
+declare global {
+  interface Window {
+    PROJECTS: any;
+    FONTS: any;
+  }
+}
 
 export default class Resources extends EventEmitter {
+  world;
+  textureLoader;
+  projectsData;
+  numAssets;
+  loadedAssets;
+  fontsData;
   constructor() {
     super();
     this.world = new World();
@@ -11,13 +24,15 @@ export default class Resources extends EventEmitter {
     this.loadedAssets = 0;
     this.load();
 
+    this.fontsData = window.FONTS;
+
     this.world.debug
       .addButton({ title: "finish loading" })
       .on("click", () => this.emit("finsished loading"));
   }
 
   load() {
-    this.projectsData.forEach((project) => {
+    this.projectsData.forEach((project: any) => {
       this.textureLoader.load(project.link, (texture) => {
         project.texture = texture;
         this.onAssetLoaded();

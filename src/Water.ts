@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Reflector } from "three/examples/jsm/objects/Reflector";
-import { BufferTexture } from "./BufferTexture";
+// import { BufferTexture } from "./BufferTexture";
 import WaterRippleBuffer from "./WaterRippleBuffer";
 import f from "./fragment.glsl";
 import v from "./vertex.glsl";
@@ -8,6 +8,24 @@ import World from "./app2";
 import ReflectionBuffer from "./ReflectionBuffer";
 
 export class Water {
+  world;
+  renderer;
+  camera;
+  scene;
+  waterPosition;
+  buffer;
+  mesh;
+  material: any;
+  reflector;
+  t: any;
+  blockBloomDummy: any;
+  dummySphere: any;
+  sphereRT: any;
+  waterNormal: any;
+  sphereScene: any;
+  readWaterLevelImage: any;
+  sphereRTmat: any;
+  calcMesh: any;
   constructor() {
     this.world = new World();
     this.renderer = this.world.renderer;
@@ -82,7 +100,7 @@ export class Water {
     this.material.uniforms["textureMatrix"] = { value: null };
     this.material.uniforms["u_buffer"] = this.buffer.uniform;
 
-    this.material.onBeforeCompile = (shader) => {
+    this.material.onBeforeCompile = (shader: any) => {
       //   console.log(shader.fragmentShader);
       shader.fragmentShader = shader.fragmentShader.replace(
         "uniform float opacity;",
@@ -127,7 +145,7 @@ export class Water {
     this.scene.add(this.blockBloomDummy);
   }
 
-  onPointermove(uv) {
+  onPointermove(uv: any) {
     this.buffer.onPointermove(uv);
   }
 
@@ -141,7 +159,7 @@ export class Water {
     this.buffer.resize(this.world.resolutionX, this.world.resolutionY);
   }
 
-  update(delta) {
+  update(delta: any) {
     this.reflector.update();
     this.buffer.updateValues(delta);
     this.buffer.update();

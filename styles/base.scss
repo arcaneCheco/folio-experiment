@@ -17,3 +17,11 @@ body {
   height: 100vh;
   position: fixed;
 }
+
+#debug {
+  z-index: 2;
+  position: absolute;
+  width: 300px;
+  right: 0;
+  height: fit-content;
+}

@@ -2,6 +2,9 @@ import * as THREE from "three";
 import World from "./app2";
 
 export default class RendererWrapper {
+  world;
+  container;
+  instance;
   constructor() {
     this.world = new World();
     this.container = this.world.container;

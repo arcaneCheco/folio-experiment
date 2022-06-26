@@ -3,14 +3,19 @@ import skyVertex from "./shaders/sky/vertex.glsl";
 import skyFragment from "./shaders/sky/fragment.glsl";
 import World from "./app2";
 // import matcapImg from "./testmapcap.jpeg";
-import matcapImg from "./testmapcap2.jpeg";
 
 export default class Sky {
+  world;
+  scene;
+  textureLoader;
+  matcap;
+  material;
+  mesh;
   constructor() {
     this.world = new World();
     this.scene = this.world.scene;
     this.textureLoader = this.world.textureLoader;
-    this.matcap = this.textureLoader.load(matcapImg);
+    this.matcap = this.textureLoader.load("testmapcap2.jpeg");
 
     // const geometry = new THREE.BoxGeometry(1, 1, 1);
     const geometry = new THREE.SphereGeometry(1);

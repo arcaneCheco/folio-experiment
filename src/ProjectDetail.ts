@@ -3,6 +3,13 @@ import * as THREE from "three";
 import VisitButton from "./VisitButton";
 
 export default class ProjectDetail {
+  world: World;
+  scene;
+  raycaster;
+  visitButton;
+  group;
+  visitButtonTouchPlane;
+  hover: any;
   constructor() {
     this.world = new World();
     this.scene = this.world.scene;

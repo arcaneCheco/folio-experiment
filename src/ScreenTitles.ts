@@ -1,12 +1,33 @@
 import * as THREE from "three";
-import World from "./app2";
+import World, { Template } from "./app2";
 import MsdfTitle from "./MsdfTitle";
-import TextGeometryOGL from "./text/TextGeometryOGL";
-import font from "./text/Audiowide-Regular.json";
-import Text from "./text/Text";
 import { degToRad, clamp, lerp } from "three/src/math/MathUtils";
 
 export default class ScreenTitles {
+  world;
+  scene;
+  camera;
+  textureLoader;
+  renderer;
+  raycaster;
+  overlayTop;
+  overlayBottom;
+  activeProject;
+  hover;
+  scroll;
+  debug: any;
+  settings: any;
+  projectsData: any;
+  titles: any;
+  materials: any;
+  group: any;
+  paths: any;
+  nTitles: any;
+  touchPlanes: any;
+  zeroMagnet: any;
+  limitMagnet: any;
+  totalHeight: any;
+  rt: any;
   constructor() {
     this.world = new World();
     this.scene = this.world.scene;
@@ -47,7 +68,7 @@ export default class ScreenTitles {
 
   onPreloaded() {
     console.log("hello1");
-    if (window.location.pathname.includes("/projects/")) {
+    if (this.world.template === Template.ProjectDetail) {
       console.log("hello2");
       const [projectName] = window.location.pathname.split("/").slice(-1);
       console.log(projectName);
@@ -61,7 +82,7 @@ export default class ScreenTitles {
       .addBlade({
         view: "list",
         label: "scroll To",
-        options: this.titles.map((mesh) => {
+        options: this.titles.map((mesh: any) => {
           return {
             text: String(mesh.userData.index),
             value: mesh.scrollPosition,
@@ -69,7 +90,7 @@ export default class ScreenTitles {
         }),
         value: null,
       })
-      .on("change", ({ value }) => {
+      .on("change", ({ value }: any) => {
         this.scroll.target = value;
       });
     this.debug.addInput(this.materials[0].uniforms.uStroke, "value", {
@@ -98,7 +119,7 @@ export default class ScreenTitles {
     this.titles = [];
     this.materials = [];
     this.paths = [];
-    this.projectsData.map((project) => {
+    this.projectsData.map((project: any) => {
       this.paths.push(project.path);
       const msdfObject = new MsdfTitle(project.title);
       this.materials.push(msdfObject.material);
@@ -118,8 +139,8 @@ export default class ScreenTitles {
     const g = new THREE.PlaneGeometry(1, 1);
     const m = new THREE.MeshBasicMaterial({ visible: false });
     const mesh = new THREE.Mesh(g, m);
-    this.titles.forEach((titleMesh) => {
-      const touchMesh = mesh.clone();
+    this.titles.forEach((titleMesh: any) => {
+      const touchMesh: any = mesh.clone();
       touchMesh.position.x += titleMesh.userData.textWidth * 0.5;
       touchMesh.position.y -= 0.5 * (titleMesh.userData.textHeight - 1);
       titleMesh.add(touchMesh);
@@ -133,7 +154,7 @@ export default class ScreenTitles {
     });
   }
 
-  updateActiveProject(index) {
+  updateActiveProject(index: any) {
     if (this.activeProject === index) return;
     this.materials[this.activeProject].uniforms.uHover.value = false;
     this.activeProject = index;
@@ -146,7 +167,7 @@ export default class ScreenTitles {
     const intersects = this.raycaster.intersectObjects(this.touchPlanes);
     if (intersects.length) {
       this.hover = true;
-      const hit = intersects[0];
+      const hit: any = intersects[0];
       this.updateActiveProject(hit.object.index);
     } else {
       this.hover = false;
@@ -154,13 +175,13 @@ export default class ScreenTitles {
   }
 
   onPointermove() {
-    if (this.world.template !== "/projects") return;
+    if (this.world.template !== Template.Projects) return;
     this.raycaster.setFromCamera(this.world.mouse, this.camera);
     this.checkIntersect();
   }
 
-  onWheel(delta) {
-    if (this.world.template !== "/projects") return;
+  onWheel(delta: any) {
+    if (this.world.template !== Template.Projects) return;
     // this.scroll.target = this.scroll.target + delta * 0.0005;
     this.scroll.target = clamp(
       this.scroll.target + delta * 0.05,
@@ -201,7 +222,7 @@ export default class ScreenTitles {
   }
 
   onPointerdown() {
-    if (this.world.template !== "/projects") return;
+    if (this.world.template !== Template.Projects) return;
     if (this.hover) {
       // this.world.onChange({
       //   url: this.paths[this.activeProject],
@@ -239,7 +260,7 @@ export default class ScreenTitles {
     // set title positions inside group
     const spacing = this.settings.spacing;
     this.totalHeight = this.settings.marginTop;
-    this.titles.map((mesh, index) => {
+    this.titles.map((mesh: any, index: any) => {
       // assume loop-index is the same as mesh-index
       mesh.initialPosition = -this.totalHeight;
       mesh.position.y = mesh.initialPosition;
@@ -256,7 +277,7 @@ export default class ScreenTitles {
     this.scroll.limit =
       this.totalHeight * scale - this.world.resolutionY * scaleFactor;
 
-    this.titles.map((mesh) => {
+    this.titles.map((mesh: any) => {
       // set scroll-position
       let target = mesh.initialPosition - mesh.userData.textHeight * 0.5;
       target =
@@ -288,9 +309,11 @@ export default class ScreenTitles {
   }
 
   update() {
-    if (this.world.template !== "/projects") return;
+    if (this.world.template !== Template.Projects) return;
     this.updateScrollPosition();
-    this.materials.map((mat) => (mat.uniforms.uTime.value = this.world.time));
+    this.materials.map(
+      (mat: any) => (mat.uniforms.uTime.value = this.world.time)
+    );
   }
 
   // nvagitation stuff

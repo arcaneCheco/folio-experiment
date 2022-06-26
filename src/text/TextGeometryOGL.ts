@@ -1,12 +1,13 @@
 import * as THREE from "three";
-import Text from "./Text";
+import Text, { TextProps } from "./Text";
 
 export default class TextGeometryOGL extends THREE.BufferGeometry {
+  text: Text;
   constructor() {
     super();
   }
 
-  setText(opt) {
+  setText(opt: TextProps) {
     this.text = new Text(opt);
     this.setAttribute(
       "position",

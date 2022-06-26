@@ -24,5 +24,11 @@
       "index": 3,
       "path": "/projects/elastic-mesh"
     }
-  ]
+  ],
+  "fonts": {
+    "audiowide": {
+      "data": "",
+      "url": ""
+    }
+  }
 }

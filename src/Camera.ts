@@ -5,6 +5,15 @@ import World from "./app2";
 import GSAP from "gsap";
 
 export default class Camera {
+  world;
+  lookAtTarget;
+  enableParallax;
+  instance;
+  controls;
+  parallaxSettings;
+  cameraDebugFolder;
+  resolutionX: any;
+  resolutionY: any;
   constructor() {
     this.world = new World();
     this.lookAtTarget = new THREE.Vector2();

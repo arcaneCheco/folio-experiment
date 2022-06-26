@@ -3,7 +3,16 @@ import { Reflector } from "three/examples/jsm/objects/Reflector";
 import World from "./app2";
 
 export default class ReflectionBuffer {
-  constructor(geometry, waterMaterial, waterMesh) {
+  world;
+  camera;
+  waterMesh;
+  waterMaterial;
+  renderer;
+  scene;
+  reflector;
+  output;
+  textureMatrix;
+  constructor(geometry: any, waterMaterial: any, waterMesh: any) {
     this.world = new World();
     this.camera = this.world.camera;
     this.waterMesh = waterMesh;
@@ -44,11 +53,18 @@ export default class ReflectionBuffer {
     this.waterMaterial.uniforms["textureMatrix"].value = this.textureMatrix;
     this.reflector.matrixWorld.copy(this.waterMesh.matrixWorld);
 
-    this.reflector.onBeforeRender(this.renderer, this.scene, this.camera);
+    this.reflector.onBeforeRender(
+      this.renderer,
+      this.scene,
+      this.camera,
+      null,
+      null,
+      null
+    );
     //   this.waterMesh.visible = true;
   }
 
-  onResize(s) {
+  onResize(s: any) {
     this.reflector.scale.setScalar(s);
   }
 }

@@ -1,23 +1,24 @@
 import * as THREE from "three";
 import World from "./app2";
-// import vertexShader from "./shaders/msdfTitle/vertex.glsl";
-// import fragmentShader from "./shaders/msdfTitle/fragment.glsl";
 import TextGeometryOGL from "./text/TextGeometryOGL";
-import font from "./text/Audiowide-Regular.json";
-// import font from "../fonts/magzetician/MagzeticianRegular.json";
 import vertexShader from "./shaders/msdfTitle2/vertex.glsl";
 import fragmentShader from "./shaders/msdfTitle2/fragment.glsl";
-import glitch3 from "./shaders/ac71v4Th40ry/assets/glitch3.jpeg";
 
 export default class MsdfTitle {
-  constructor(text) {
+  world;
+  textureLoader;
+  scene;
+  geometry;
+  material;
+  mesh;
+  constructor(text: any) {
     this.world = new World();
     this.textureLoader = this.world.textureLoader;
     this.scene = this.world.scene;
 
     this.geometry = new TextGeometryOGL();
     this.geometry.setText({
-      font,
+      font: this.world.resources.fontsData.audiowide.data,
       text,
       size: 1,
       letterSpacing: 0,
@@ -40,7 +41,9 @@ export default class MsdfTitle {
         uAlpha: { value: 0.5 },
         uHover: { value: false },
         uTime: { value: 0 },
-        tMask: { value: this.textureLoader.load(glitch3) },
+        tMask: {
+          value: this.textureLoader.load("activeTheory/assets/glitch3.jpeg"),
+        },
         uResolution: {
           value: new THREE.Vector2(window.innerWidth, window.innerHeight),
         },

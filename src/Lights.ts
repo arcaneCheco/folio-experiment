@@ -1,14 +1,21 @@
 import * as THREE from "three";
 import World from "./app2";
-import {
-  Lensflare,
-  LensflareElement,
-} from "three/examples/jsm/objects/Lensflare";
-import lensflare0 from "./lensflareTextures/lensflare0.png";
-import lensflare2 from "./lensflareTextures/lensflare2.png";
-import lensflare3 from "./lensflareTextures/lensflare3.png";
+// import {
+//   Lensflare,
+//   LensflareElement,
+// } from "three/examples/jsm/objects/Lensflare";
+// import lensflare0 from "./lensflareTextures/lensflare0.png";
+// import lensflare2 from "./lensflareTextures/lensflare2.png";
+// import lensflare3 from "./lensflareTextures/lensflare3.png";
 
 export default class Lights {
+  world;
+  scene;
+  sun4;
+  ambinet;
+  pointerLight;
+  debug;
+  moonLightDebug;
   constructor() {
     this.world = new World();
     this.scene = this.world.scene;

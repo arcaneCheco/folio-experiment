@@ -6,6 +6,11 @@ import * as fs from "fs";
 let data = fs.readFileSync("./data.json");
 data = JSON.parse(data);
 
+let font1 = fs.readFileSync("./src/text/Audiowide-Regular.json");
+font1 = JSON.parse(font1);
+data.fonts.audiowide.data = font1;
+data.fonts.audiowide.url = "Audiowide-Regular.ttf.png";
+
 const app = express();
 
 const PORT = 1234;
@@ -21,6 +26,7 @@ app.get(
   async (req, res) => {
     res.render("index", {
       projects: data.projects,
+      fonts: data.fonts,
     });
   }
 );
