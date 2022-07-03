@@ -56,7 +56,10 @@ export default class ScreenTitles {
   }
 
   setDebug() {
-    this.debug = this.world.debug.addFolder({ title: "project titles" });
+    this.debug = this.world.debug.addFolder({
+      title: "project titles",
+      expanded: false,
+    });
     this.settings = {
       spacing: 0.6,
       scale: 0.75,
@@ -67,11 +70,8 @@ export default class ScreenTitles {
   }
 
   onPreloaded() {
-    console.log("hello1");
     if (this.world.template === Template.ProjectDetail) {
-      console.log("hello2");
       const [projectName] = window.location.pathname.split("/").slice(-1);
-      console.log(projectName);
     }
     this.projectsData = this.world.resources.projectsData;
     this.setMesh();
@@ -160,7 +160,6 @@ export default class ScreenTitles {
     this.activeProject = index;
     this.materials[this.activeProject].uniforms.uHover.value = true;
     this.world.faScreen.updateActiveProject(index);
-    console.log(this.activeProject, "YOOYOO");
   }
 
   checkIntersect() {

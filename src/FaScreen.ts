@@ -54,10 +54,6 @@ export default class FaScreen {
     this.raycaster = this.world.raycaster;
     this.hover = false;
     this.init();
-
-    this.world.debug
-      .addButton({ title: "test" })
-      .on("click", () => this.updateActiveProject(3));
   }
 
   init() {
@@ -73,7 +69,10 @@ export default class FaScreen {
     this.update = this.updateLoading;
     this.scene.add(this.mesh);
 
-    this.debug = this.world.debug.addFolder({ title: "faScreen" });
+    this.debug = this.world.debug.addFolder({
+      title: "faScreen",
+      expanded: false,
+    });
     this.debug.addInput(this.mesh, "position", {
       picker: "inline",
       expanded: true,
@@ -177,7 +176,10 @@ export default class FaScreen {
 
     // const updateMat = (value) => this.defaultMaterial
 
-    this.debug = this.world.debug.addFolder({ title: "faScreen" });
+    this.debug = this.world.debug.addFolder({
+      title: "faScreen",
+      expanded: false,
+    });
     this.debugPhysicsMat = this.debug.addFolder({
       title: "physical material",
       expanded: false,
@@ -385,13 +387,9 @@ export default class FaScreen {
       const currentRoute = this.world.template;
       console.log("efhefe", currentRoute);
       if (currentRoute === Template.Home) {
-        console.log("LETSGO");
         this.world.onChange({ template: Template.Projects });
       } else if (currentRoute === Template.Projects) {
-        console.log("NOPE");
-        const path =
-          this.world.screenTitles.paths[this.world.screenTitles.activeProject];
-        this.world.onChange({ template: path }); // I think might need to be converted but might be better to move that logic somewhere else
+        this.world.onChange({ template: Template.ProjectDetail });
       }
     }
   }
@@ -569,6 +567,7 @@ export default class FaScreen {
   }
 
   toProjects() {
+    this.updateActiveProject(this.world.screenTitles.activeProject);
     /*********set scale/position targets */
     this.setSizesTemp();
     const monitorSize =

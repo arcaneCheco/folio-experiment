@@ -18,10 +18,24 @@ body {
   position: fixed;
 }
 
-#debug {
+// #debug {
+//   z-index: 2;
+//   position: absolute;
+//   width: 300px;
+//   right: 0;
+//   height: 0;
+// }
+
+/* Translucent pane */
+:root {
+  --tp-base-background-color: #2f313740;
+}
+.tp-rotv,
+.tp-clpv {
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.tp-dfwv {
   z-index: 2;
-  position: absolute;
-  width: 300px;
-  right: 0;
-  height: fit-content;
 }

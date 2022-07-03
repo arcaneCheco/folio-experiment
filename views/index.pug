@@ -12,12 +12,12 @@ html(lang="en")
     link(rel="stylesheet" type="text/css" href="styles/index.css")
 
   body 
-    include ./navigation.pug
-    include ./overlayNav.pug
+    //- include ./navigation.pug
+    //- include ./overlayNav.pug
     include ./projectDetail.pug
     include ./screenDummy.pug
     #canvas
-    #debug
+    //- #debug
 
     script.
       window.PROJECTS = !{JSON.stringify(projects).replace(/<\//g, "<\\/")}

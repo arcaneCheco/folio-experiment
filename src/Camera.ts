@@ -22,6 +22,8 @@ export default class Camera {
 
     this.instance = new THREE.PerspectiveCamera(10, 2, 1, 2000);
 
+    console.log(this.instance.projectionMatrix);
+
     this.controls = new OrbitControls(
       this.instance,
       this.world.renderer.domElement

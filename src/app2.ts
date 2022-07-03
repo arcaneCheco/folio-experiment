@@ -15,6 +15,7 @@ import ScreenTitles from "./ScreenTitles";
 import ProjectDetail from "./ProjectDetail";
 import Navigation from "./Navigation";
 import SelectiveBloom from "./SelectiveBloom";
+import Particles from "./Particles";
 // import * as POST from "postprocessing";
 // import { BloomEffect, EffectComposer, EffectPass, RenderPass, SelectiveBloomEffect } from "postprocessing";
 // import {
@@ -35,6 +36,7 @@ export enum Template {
 const urlToTemplateMap: { [url: string]: Template } = {
   "/": Template.Home,
   "/projects": Template.Projects,
+  "/projects/": Template.Projects,
   "/about": Template.About,
 };
 
@@ -42,6 +44,13 @@ const templateToURLMap: { [template: string]: string } = {
   Home: "/",
   Projects: "/projects",
   About: "/about",
+};
+
+const projectDetailPathToIndexMap: { [path: string]: number } = {
+  "/projects/hello-world": 0,
+  "/projects/infinite-tunnel": 1,
+  "/projects/mandelbrot-explorer": 2,
+  "/projects/elastic-mesh": 3,
 };
 
 export default class World {
@@ -56,16 +65,17 @@ export default class World {
   mouse = new THREE.Vector2();
   textureLoader = new THREE.TextureLoader();
   isPreloaded = false;
-  pane = new Pane({ container: document.querySelector("#debug") });
+  // pane = new Pane({ container: document.querySelector("#debug") });
+  pane = new Pane();
   debug: FolderApi;
   raycaster = new THREE.Raycaster();
   settings: any;
-  resources: any;
+  resources: Resources;
   selectiveBloom: SelectiveBloom;
   cameraWrapper: any;
   camera: THREE.PerspectiveCamera;
-  faScreen: any;
-  screenTitles: any;
+  faScreen: FaScreen;
+  screenTitles: ScreenTitles;
   projectDetail: any;
   rendererWrapper: any;
   renderer: THREE.WebGLRenderer;
@@ -73,6 +83,7 @@ export default class World {
   navigation: Navigation;
   water: any;
   sky: any;
+  particles: Particles;
   finalEffect: any;
   bloomComposer: any;
   finalComposer: any;
@@ -95,6 +106,7 @@ export default class World {
 
   init() {
     // this.pane.containerElem_.style.zIndex = 2;
+    // this.pane.hidden = true;
     this.pane
       .addButton({ title: "show/hide" })
       .on("click", () => (this.debug.hidden = !this.debug.hidden));
@@ -109,14 +121,16 @@ export default class World {
 
     this.setSky();
     this.setWater();
+    this.setNavigation();
     this.setScreenTitles();
     this.resources = new Resources();
     this.setProjectDetail();
+    // this.setParticles();
     this.onResize();
     // this.setPost();
     // this.setGodrays();
     this.setSelectiveBloom();
-    this.addListeners();
+    // this.addListeners();
     this.render();
   }
 
@@ -247,28 +261,45 @@ export default class World {
   //   this.composer.addPass(bloomPass);
   // }
 
+  getURLfromTemplate = (template: Template): string => {
+    if (template === Template.ProjectDetail) {
+      if (this.isPreloaded) {
+        console.log(this.screenTitles.activeProject);
+        console.log(templateToURLMap);
+        return templateToURLMap[this.screenTitles.activeProject];
+      } else {
+        const path = window.location.pathname;
+        const index = projectDetailPathToIndexMap[path];
+        this.screenTitles.activeProject = index;
+        return templateToURLMap[index];
+      }
+    }
+    return templateToURLMap[template];
+  };
+
   onPreloaded() {
-    this.isPreloaded = true;
-    this.cameraWrapper.onPreloaded();
+    this.navigation.onPreloaded();
     this.faScreen && this.faScreen.onPreloaded();
-    this.screenTitles && this.screenTitles.onPreloaded();
-    this.screenTitles.group.layers.enable(1);
-    this.screenTitles.titles.map((mesh: any) => mesh.layers.enable(1));
-    this.setNavigation();
-    // this.addListeners();
     this.onChange({
       template: urlToTemplateMap[window.location.pathname],
     });
+    this.isPreloaded = true;
+    this.cameraWrapper.onPreloaded();
+    this.screenTitles && this.screenTitles.onPreloaded();
+    this.screenTitles.group.layers.enable(1);
+    this.screenTitles.titles.map((mesh: any) => mesh.layers.enable(1));
+    this.addListeners();
+    this.debug.expanded = false;
   }
 
   onChange({ template, push = true }: { template: Template; push?: boolean }) {
-    if (template == this.template) return;
+    // if (template == this.template) return;
 
     this.previousTemplate = this.template;
     this.template = template;
 
     if (push) {
-      window.history.pushState({}, "", `${templateToURLMap[template]}`);
+      window.history.pushState({}, "", `${this.getURLfromTemplate(template)}`);
     }
 
     this.projectDetail.hide();
@@ -277,12 +308,10 @@ export default class World {
       this.screenTitles.toHome();
       this.faScreen.toHome();
     } else if (this.template === Template.Projects) {
-      console.log("To projects?");
-      console.log("HERERE");
+      console.log(this.screenTitles.activeProject);
       this.screenTitles.toProjects();
       this.faScreen.toProjects();
     } else if (this.template == Template.ProjectDetail) {
-      console.log("NOT HEREER");
       this.screenTitles.toProjectDetail();
       this.faScreen.toProjectDetail();
       this.projectDetail.show();
@@ -393,6 +422,10 @@ export default class World {
     this.water = new Water();
   }
 
+  setParticles() {
+    this.particles = new Particles();
+  }
+
   // addRandomObjects() {
   //   const sphereGeo = new THREE.SphereGeometry(3);
   //   const sphereMat = new THREE.MeshStandardMaterial();
@@ -472,7 +505,8 @@ export default class World {
   onPointermove(event: PointerEvent) {
     this.mouse.x = (2 * event.clientX) / this.resolutionX - 1;
     this.mouse.y = (-2 * event.clientY) / this.resolutionY + 1;
-    // this.ppPostMesh.material.uniforms.uPointer.value.copy(this.mouse);
+
+    this.navigation.onPointermove(this.mouse);
 
     this.cameraWrapper.onPointermove();
 
@@ -545,6 +579,7 @@ export default class World {
     this.sky && this.sky.update();
     this.screenTitles && this.screenTitles.update();
     this.faScreen && this.faScreen.update();
+    this.particles && this.particles.update();
 
     // this.updateRandonObjects();
   }

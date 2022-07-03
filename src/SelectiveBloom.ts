@@ -11,6 +11,7 @@ import finalEffectFragment from "./shaders/post/finalEffect.glsl";
 
 export default class SelectiveBloom {
   world: World;
+  debug: any;
   constructor() {
     this.world = new World();
     this.setSelectiveBloom();
@@ -38,32 +39,41 @@ export default class SelectiveBloom {
       0
     );
     this.world.bloomPass.threshold = 0;
-    this.world.bloomPass.strength = 4;
+    this.world.bloomPass.strength = 1.5;
     this.world.bloomPass.radius = 0;
     this.world.bloomPass.needsSwap = true;
-    this.world.exposure = 0;
+    this.world.exposure = 3;
+    this.world.renderer.toneMappingExposure = Math.pow(
+      this.world.exposure,
+      4.0
+    );
     this.world.bloomComposer.addPass(this.world.bloomPass);
     this.world.bloomComposer.setSize(
       window.innerWidth * res,
       window.innerHeight * res
     );
 
-    this.world.debug.addInput(this.world.bloomPass, "strength", {
+    this.debug = this.world.debug.addFolder({
+      title: "THREE bloom",
+      expanded: false,
+    });
+
+    this.debug.addInput(this.world.bloomPass, "strength", {
       min: 0,
       max: 6,
       step: 0.01,
     });
-    this.world.debug.addInput(this.world.bloomPass, "threshold", {
+    this.debug.addInput(this.world.bloomPass, "threshold", {
       min: 0,
       max: 1,
       step: 0.01,
     });
-    this.world.debug.addInput(this.world.bloomPass, "radius", {
+    this.debug.addInput(this.world.bloomPass, "radius", {
       min: 0,
       max: 50,
       step: 0.01,
     });
-    this.world.debug
+    this.debug
       .addInput(this.world, "exposure", {
         min: 0.1,
         max: 6,
