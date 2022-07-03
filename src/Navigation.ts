@@ -10,6 +10,8 @@ import textVertex from "./shaders/navigation/text/vertex.glsl";
 import textFragment from "./shaders/navigation/text/fragment.glsl";
 import buttonIconVertex from "./shaders/navigation/buttonIcon/vertex.glsl";
 import buttonIconFragment from "./shaders/navigation/buttonIcon/fragment.glsl";
+import markerLineVertex from "./shaders/navigation/markerLine/vertex.glsl";
+import markerLineFragment from "./shaders/navigation/markerLine/fragment.glsl";
 
 export default class Navigation {
   world: World;
@@ -33,6 +35,8 @@ export default class Navigation {
     markerActive: THREE.Color;
     navRadius: number;
     textHeight: number;
+    markerLineWidth: number;
+    markerLineLength: number;
   };
   markerGeometry: THREE.PlaneGeometry;
   markerMaterial: THREE.ShaderMaterial;
@@ -54,6 +58,10 @@ export default class Navigation {
   homeButtonIcon: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
   aboutButtonIcon: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
   aboutGroup: THREE.Group;
+  markerLine: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  widthScreenRatio: number;
+  heightScreenRatio: number;
+  scrollTargets: any;
   constructor() {
     this.init();
   }
@@ -77,11 +85,14 @@ export default class Navigation {
       markerSize: 50,
       navRadius: 35,
       textHeight: 20,
+      markerLineWidth: 5,
+      markerLineLength: 40,
       markerInActive: new THREE.Color(0x666666),
       markerActive: new THREE.Color(0xffffff),
     };
     this.setNavMarkers();
     this.initMarkersMesh();
+    this.setMarkerLine();
     this.setNavButton();
     this.setButtonIcons();
     this.setText();
@@ -127,6 +138,16 @@ export default class Navigation {
       this.markersMesh.setColorAt(i, this.settings.markerInActive);
     }
     this.markersMesh.setColorAt(this.activeIndex, this.settings.markerActive);
+  }
+
+  setMarkerLine() {
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    const material = new THREE.ShaderMaterial({
+      vertexShader: markerLineVertex,
+      fragmentShader: markerLineFragment,
+    });
+    this.markerLine = new THREE.Mesh(geometry, material);
+    this.group.add(this.markerLine);
   }
 
   setNavButton() {
@@ -247,11 +268,9 @@ export default class Navigation {
   }
 
   updateColors(id: number) {
-    if (id === this.activeIndex) return;
     this.markersMesh.setColorAt(this.activeIndex, this.settings.markerInActive);
     this.markersMesh.setColorAt(id, this.settings.markerActive);
     this.markersMesh.instanceColor.needsUpdate = true;
-    this.activeIndex = id;
   }
 
   onUpdateCount() {
@@ -358,12 +377,18 @@ export default class Navigation {
 
     document.body.style.cursor = "";
 
-    const intersectMarkersMesh = this.raycaster.intersectObject(
-      this.markersMesh
-    );
-    if (intersectMarkersMesh.length) {
-      document.body.style.cursor = "pointer";
-      this.updateColors(intersectMarkersMesh[0].instanceId);
+    if (this.world.template === Template.Projects) {
+      const intersectMarkersMesh = this.raycaster.intersectObject(
+        this.markersMesh
+      );
+      if (intersectMarkersMesh.length) {
+        document.body.style.cursor = "pointer";
+        const id = intersectMarkersMesh[0].instanceId;
+        if (id == this.activeIndex) return;
+        this.updateColors(id);
+        this.activeIndex = id;
+        this.onSelectedChange(id);
+      }
     }
 
     const intersectHomeNav = this.raycaster.intersectObject(this.homeNav);
@@ -395,42 +420,93 @@ export default class Navigation {
     }
   }
 
+  onPointerdown() {
+    if (this.isHomeButtonActive) {
+      this.world.onChange({ template: Template.Home });
+    } else if (this.isAboutButtonActive) {
+      this.world.onChange({ template: Template.About });
+    }
+  }
+
+  onSelectedChange(id: number) {
+    this.scroll = this.world.screenTitles.scroll;
+    this.scrollTargets = this.world.screenTitles.titles.map(
+      (titleEntry: any) => titleEntry.scrollPosition
+    );
+    this.scroll.target = this.scrollTargets[id];
+    this.world.screenTitles.updateActiveProject(id);
+  }
+
+  resetSizeTargets() {
+    const template = this.world.template;
+    this.widthScreenRatio = 2 / window.innerWidth;
+    this.heightScreenRatio = 2 / window.innerHeight;
+
+    let markerLineWidth, markerLineHeight, navButtonGroupPosition;
+    if (template === Template.Projects) {
+      const h = this.settings.markerSize * this.heightScreenRatio;
+
+      markerLineWidth = this.settings.markerLineWidth * this.widthScreenRatio;
+      markerLineHeight = h * (this.markersMesh.count - 1);
+
+      navButtonGroupPosition = (this.markersMesh.count - 1) * h * 0.5; // hieght of first marker
+      navButtonGroupPosition +=
+        this.settings.navRadius * this.heightScreenRatio + h / 2; // top of markers
+      navButtonGroupPosition += 5 * this.heightScreenRatio; // gap
+    } else if (template === Template.Home) {
+      markerLineWidth = this.settings.markerLineLength * this.widthScreenRatio;
+      markerLineHeight = this.settings.markerLineWidth * this.widthScreenRatio;
+      navButtonGroupPosition =
+        (this.settings.navRadius + 20) * this.heightScreenRatio;
+    }
+
+    return {
+      markerLine: {
+        width: markerLineWidth,
+        height: markerLineHeight,
+      },
+      navButtonGroupPosition,
+    };
+  }
+
   onResize() {
+    const { markerLine, navButtonGroupPosition } = this.resetSizeTargets();
+
     const aspect = window.innerWidth / window.innerHeight;
+
+    // markerMesh
     const w = (2 * this.settings.markerSize) / window.innerWidth;
     const h = w * aspect;
     this.markersMesh.scale.set(w, h, 1);
 
+    this.markerLine.scale.set(markerLine.width, markerLine.height, 1);
+
+    // navButtons
     const navButtonWidth = (2 * this.settings.navRadius) / window.innerWidth;
     const navButtonHeight = navButtonWidth * aspect;
-
-    this.homeGroup.position.y = (this.markersMesh.count - 1) * h * 0.5; // hieght of first marker
-    this.homeGroup.position.y += navButtonHeight + h / 2; // top of markers
-    this.homeGroup.position.y += (10 / window.innerWidth) * aspect; // gap
-
     this.homeNav.scale.set(navButtonWidth, navButtonHeight, 1);
-
-    this.aboutGroup.position.y = -this.homeGroup.position.y;
-
     this.aboutNav.scale.set(navButtonWidth, navButtonHeight, 1);
 
+    // navButtonGroups
+    this.homeGroup.position.y = navButtonGroupPosition;
+    this.aboutGroup.position.y = -navButtonGroupPosition;
+
+    // icons
     const iconWidth = 80 / window.innerWidth;
     const iconHeight = (aspect * 80) / window.innerWidth;
-
     this.homeButtonIcon.scale.set(iconWidth, iconHeight, 1);
-
     this.aboutButtonIcon.scale.set(iconWidth, iconHeight, 1);
 
+    // text
     const textScale =
-      ((2 * this.settings.textHeight) / window.innerWidth) * aspect;
+      ((2 * this.settings.textHeight) / window.innerWidth) * aspect; // set textheight relaitve to viewport height
     const textPosition = (-50 * 2) / window.innerWidth;
-
     this.homeText.scale.setScalar(textScale);
     this.homeText.position.x = textPosition;
-
     this.aboutText.scale.setScalar(textScale);
     this.aboutText.position.x = textPosition;
 
+    // text mask
     this.homeText.material.uniforms.uViewport.value.set(
       window.innerWidth,
       window.innerHeight
@@ -440,7 +516,6 @@ export default class Navigation {
       (0.9 + 1) / 2,
       (this.homeGroup.position.y + 1) / 2
     );
-
     this.aboutText.material.uniforms.uViewport.value.set(
       window.innerWidth,
       window.innerHeight
@@ -452,67 +527,59 @@ export default class Navigation {
     );
   }
 
-  setOldNav() {
-    this.screenTitles = this.world.screenTitles;
-    this.titles = this.screenTitles.titles;
-    this.nTitles = this.screenTitles.nTitles;
-    this.scroll = this.screenTitles.scroll;
-    this.navigationLine = document.querySelector(".navigation__line");
-    this.markers = [];
-    for (let i = 0; i < this.nTitles; i++) {
-      const marker: any = document.createElement("div");
-      this.markers.push(marker);
-      marker.index = i;
-      marker.scrollTarget = this.titles[i].scrollPosition;
-      marker.classList.add("navigation__line__marker");
-      this.navigationLine.appendChild(marker);
-      marker.onpointerover = ({ target }: any) => {
-        if (this.world.template !== Template.Projects) return;
-        this.scroll.target = target.scrollTarget;
-        this.screenTitles.updateActiveProject(target.index);
-      };
-    }
-    this.homeButton = document.querySelector(".navigation__home");
-    this.aboutButton = document.querySelector(".navigation__about");
-    this.homeButton.onclick = () =>
-      this.world.onChange({ template: Template.Home });
-    this.aboutButton.onclick = () =>
-      this.world.onChange({ template: Template.About });
+  toHome() {
+    this.group.remove(this.markersMesh);
+    const { markerLine, navButtonGroupPosition } = this.resetSizeTargets();
+    GSAP.timeline()
+      .to(this.markerLine.scale, {
+        y: markerLine.height,
+        duration: 0.25,
+      })
+      .to(
+        this.markerLine.scale,
+        {
+          x: markerLine.width,
+          duration: 0.1,
+        },
+        "-=0"
+      );
+
+    GSAP.to(this.homeGroup.position, {
+      y: navButtonGroupPosition,
+      duration: 0.5,
+    });
+    GSAP.to(this.aboutGroup.position, {
+      y: -navButtonGroupPosition,
+      duration: 0.5,
+    });
   }
 
-  // setDebug() {
-  //   this.debug = this.world.debug.addFolder({
-  //     title: "navigation",
-  //     expanded: true,
-  //   });
-  //   this.debug
-  //     .addBlade({
-  //       view: "list",
-  //       label: "route",
-  //       options: [
-  //         { text: "home", value: "/" },
-  //         { text: "projects", value: "/projects" },
-  //         { text: "elasticMesh", value: "/projects/elastic-mesh" },
-  //         { text: "about", value: "/about" },
-  //       ],
-  //       value: "",
-  //     })
-  //     .on("change", ({ value }: any) => {
-  //       // ignore for now, come back after defining types everywhere
-  //       this.world.onChange({ template: value });
-  //     });
-  // }
+  toProjects() {
+    this.group.add(this.markersMesh);
+    const { markerLine, navButtonGroupPosition } = this.resetSizeTargets();
+    GSAP.timeline()
+      .to(this.markerLine.scale, {
+        y: markerLine.height,
+        duration: 0.25,
+      })
+      .to(
+        this.markerLine.scale,
+        {
+          x: markerLine.width,
+          duration: 0.1,
+        },
+        "-=0"
+      );
 
-  setOverlayNav() {
-    this.topoverlay = document.querySelector(".overlayTop");
-    this.topoverlay.onclick = () => {
-      this.topoverlay.style.visibility = "hidden";
-      this.world.onChange({ template: Template.Home });
-    };
-    this.bottomoverlay = document.querySelector(".overlayBottom");
-    this.bottomoverlay.onclick = () => {
-      this.bottomoverlay.style.visibility = "hidden";
-      this.world.onChange({ template: Template.About });
-    };
+    GSAP.to(this.homeGroup.position, {
+      y: navButtonGroupPosition,
+      duration: 0.5,
+    });
+    GSAP.to(this.aboutGroup.position, {
+      y: -navButtonGroupPosition,
+      duration: 0.5,
+    });
   }
+
+  // at top or bottom of list just navigate on hard scroll
 }

@@ -307,10 +307,12 @@ export default class World {
     if (this.template === Template.Home) {
       this.screenTitles.toHome();
       this.faScreen.toHome();
+      this.navigation.toHome();
     } else if (this.template === Template.Projects) {
       console.log(this.screenTitles.activeProject);
       this.screenTitles.toProjects();
       this.faScreen.toProjects();
+      this.navigation.toProjects();
     } else if (this.template == Template.ProjectDetail) {
       this.screenTitles.toProjectDetail();
       this.faScreen.toProjectDetail();
@@ -534,7 +536,8 @@ export default class World {
     this.water && this.water.buffer.onMousedown();
     this.faScreen && this.faScreen.onPointerdown();
     this.screenTitles && this.screenTitles.onPointerdown();
-    this.projectDetail ** this.projectDetail.onPointerdown();
+    this.projectDetail && this.projectDetail.onPointerdown();
+    this.navigation && this.navigation.onPointerdown();
   }
   onPointerup() {
     this.water && this.water.buffer.onMouseup();
@@ -554,6 +557,7 @@ export default class World {
 
     this.faScreen && this.faScreen.onResize();
     this.screenTitles && this.screenTitles.onResize();
+    this.isPreloaded && this.navigation.onResize();
     // this.screen && this.screen.onResize();
   }
 
