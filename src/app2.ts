@@ -76,7 +76,7 @@ export default class World {
   camera: THREE.PerspectiveCamera;
   faScreen: FaScreen;
   screenTitles: ScreenTitles;
-  projectDetail: any;
+  projectDetail: ProjectDetail;
   rendererWrapper: any;
   renderer: THREE.WebGLRenderer;
   lights: any;
@@ -279,6 +279,7 @@ export default class World {
   onPreloaded() {
     this.navigation.onPreloaded();
     this.faScreen && this.faScreen.onPreloaded();
+    this.setProjectDetail();
     this.onChange({
       template: urlToTemplateMap[window.location.pathname],
     });
@@ -287,7 +288,6 @@ export default class World {
     this.screenTitles && this.screenTitles.onPreloaded();
     this.screenTitles.group.layers.enable(1);
     this.screenTitles.titles.map((mesh: any) => mesh.layers.enable(1));
-    this.setProjectDetail();
     this.addListeners();
     this.debug.expanded = false;
   }
@@ -316,7 +316,7 @@ export default class World {
     } else if (this.template == Template.ProjectDetail) {
       this.screenTitles.toProjectDetail();
       this.faScreen.toProjectDetail();
-      // this.projectDetail.show();
+      this.projectDetail.toProjectDetail();
     } else if (this.template === Template.About) {
       this.screenTitles.toAbout();
       this.faScreen.toAbout();
@@ -510,6 +510,7 @@ export default class World {
 
     this.navigation.onPointermove(this.mouse);
     this.projectDetail.onPointermove(this.mouse);
+    // this.projectDetail.onPointermove();
 
     this.cameraWrapper.onPointermove();
 
@@ -537,7 +538,7 @@ export default class World {
     this.water && this.water.buffer.onMousedown();
     this.faScreen && this.faScreen.onPointerdown();
     this.screenTitles && this.screenTitles.onPointerdown();
-    // this.projectDetail && this.projectDetail.onPointerdown();
+    this.projectDetail && this.projectDetail.onPointerdown();
     this.navigation && this.navigation.onPointerdown();
   }
   onPointerup() {

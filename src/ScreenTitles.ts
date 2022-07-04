@@ -70,10 +70,18 @@ export default class ScreenTitles {
   }
 
   onPreloaded() {
-    if (this.world.template === Template.ProjectDetail) {
-      const [projectName] = window.location.pathname.split("/").slice(-1);
-    }
     this.projectsData = this.world.resources.projectsData;
+    if (this.world.template === Template.ProjectDetail) {
+      let projectName = window.location.pathname
+        .split("/")
+        .slice(1, 3)
+        .join("/");
+      projectName = `/${projectName}`;
+      this.activeProject = this.projectsData.find(
+        (entry: any) => entry.path === projectName
+      ).index;
+      console.log(this.activeProject);
+    }
     this.setMesh();
     this.setTouchPlanes();
     this.onResize();

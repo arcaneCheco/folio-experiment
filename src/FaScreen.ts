@@ -98,6 +98,7 @@ export default class FaScreen {
     this.projectTextures = this.world.resources.projectsData.map(
       (project: any) => project.texture
     );
+    this.updateActiveProject(this.world.screenTitles.activeProject);
   }
 
   setGeometry() {
