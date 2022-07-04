@@ -124,7 +124,6 @@ export default class World {
     this.setNavigation();
     this.setScreenTitles();
     this.resources = new Resources();
-    this.setProjectDetail();
     // this.setParticles();
     this.onResize();
     // this.setPost();
@@ -288,6 +287,7 @@ export default class World {
     this.screenTitles && this.screenTitles.onPreloaded();
     this.screenTitles.group.layers.enable(1);
     this.screenTitles.titles.map((mesh: any) => mesh.layers.enable(1));
+    this.setProjectDetail();
     this.addListeners();
     this.debug.expanded = false;
   }
@@ -302,7 +302,7 @@ export default class World {
       window.history.pushState({}, "", `${this.getURLfromTemplate(template)}`);
     }
 
-    this.projectDetail.hide();
+    // this.projectDetail.hide();
 
     if (this.template === Template.Home) {
       this.screenTitles.toHome();
@@ -316,7 +316,7 @@ export default class World {
     } else if (this.template == Template.ProjectDetail) {
       this.screenTitles.toProjectDetail();
       this.faScreen.toProjectDetail();
-      this.projectDetail.show();
+      // this.projectDetail.show();
     } else if (this.template === Template.About) {
       this.screenTitles.toAbout();
       this.faScreen.toAbout();
@@ -509,6 +509,7 @@ export default class World {
     this.mouse.y = (-2 * event.clientY) / this.resolutionY + 1;
 
     this.navigation.onPointermove(this.mouse);
+    this.projectDetail.onPointermove(this.mouse);
 
     this.cameraWrapper.onPointermove();
 
@@ -527,16 +528,16 @@ export default class World {
     }
     this.faScreen && this.faScreen.onPointermove();
     this.screenTitles && this.screenTitles.onPointermove();
-    this.projectDetail &&
-      this.template === Template.ProjectDetail &&
-      this.projectDetail.onPointermove();
+    // this.projectDetail &&
+    //   this.template === Template.ProjectDetail &&
+    //   this.projectDetail.onPointermove();
   }
 
   onPointerdown() {
     this.water && this.water.buffer.onMousedown();
     this.faScreen && this.faScreen.onPointerdown();
     this.screenTitles && this.screenTitles.onPointerdown();
-    this.projectDetail && this.projectDetail.onPointerdown();
+    // this.projectDetail && this.projectDetail.onPointerdown();
     this.navigation && this.navigation.onPointerdown();
   }
   onPointerup() {
@@ -558,6 +559,7 @@ export default class World {
     this.faScreen && this.faScreen.onResize();
     this.screenTitles && this.screenTitles.onResize();
     this.isPreloaded && this.navigation.onResize();
+    this.projectDetail && this.projectDetail.onResize();
     // this.screen && this.screen.onResize();
   }
 
@@ -584,6 +586,7 @@ export default class World {
     this.screenTitles && this.screenTitles.update();
     this.faScreen && this.faScreen.update();
     this.particles && this.particles.update();
+    this.projectDetail && this.projectDetail.update();
 
     // this.updateRandonObjects();
   }

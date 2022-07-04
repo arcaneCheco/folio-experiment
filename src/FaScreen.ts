@@ -423,8 +423,10 @@ export default class FaScreen {
       },
       projectDetail: {
         default: new THREE.Vector3(
-          window.innerWidth * 0.75,
-          window.innerWidth * 0.75 * (9 / 16)
+          window.innerWidth,
+          window.innerHeight
+          // window.innerWidth * 0.75,
+          // window.innerWidth * 0.75 * (9 / 16)
         ),
         700: new THREE.Vector3(
           window.innerWidth * 0.9,
@@ -486,6 +488,7 @@ export default class FaScreen {
     this.mesh.scale.y = this.pixelSize * monitorSize.y;
     // mesh is 2 units above water and in the middle of the screen
     let heightAboveWater = -2;
+    heightAboveWater = 0;
     this.world.camera.position.y = heightAboveWater + this.mesh.scale.y / 2;
     this.mesh.position.y = this.world.camera.position.y;
   }
