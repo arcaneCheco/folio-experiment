@@ -295,6 +295,10 @@ export default class ProjectDetail {
   toProjectDetail() {
     this.scene.add(this.group);
   }
+
+  toAbout() {
+    this.scene.remove(this.group);
+  }
 }
 
 /*

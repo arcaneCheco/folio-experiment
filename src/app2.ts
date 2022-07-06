@@ -16,6 +16,7 @@ import ProjectDetail from "./ProjectDetail";
 import Navigation from "./Navigation";
 import SelectiveBloom from "./SelectiveBloom";
 import Particles from "./Particles";
+import About from "./About";
 // import * as POST from "postprocessing";
 // import { BloomEffect, EffectComposer, EffectPass, RenderPass, SelectiveBloomEffect } from "postprocessing";
 // import {
@@ -77,6 +78,7 @@ export default class World {
   faScreen: FaScreen;
   screenTitles: ScreenTitles;
   projectDetail: ProjectDetail;
+  about: About;
   rendererWrapper: any;
   renderer: THREE.WebGLRenderer;
   lights: any;
@@ -280,6 +282,7 @@ export default class World {
     this.navigation.onPreloaded();
     this.faScreen && this.faScreen.onPreloaded();
     this.setProjectDetail();
+    this.setAbout();
     this.onChange({
       template: urlToTemplateMap[window.location.pathname],
     });
@@ -320,6 +323,7 @@ export default class World {
     } else if (this.template === Template.About) {
       this.screenTitles.toAbout();
       this.faScreen.toAbout();
+      this.projectDetail.toAbout();
     }
   }
 
@@ -420,6 +424,10 @@ export default class World {
     this.projectDetail = new ProjectDetail();
   }
 
+  setAbout() {
+    this.about = new About();
+  }
+
   setWater() {
     this.water = new Water();
   }
@@ -507,12 +515,12 @@ export default class World {
   onPointermove(event: PointerEvent) {
     this.mouse.x = (2 * event.clientX) / this.resolutionX - 1;
     this.mouse.y = (-2 * event.clientY) / this.resolutionY + 1;
+    this.cameraWrapper.onPointermove();
+    return;
 
     this.navigation.onPointermove(this.mouse);
     this.projectDetail.onPointermove(this.mouse);
     // this.projectDetail.onPointermove();
-
-    this.cameraWrapper.onPointermove();
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
     if (this.water) {
@@ -535,10 +543,13 @@ export default class World {
   }
 
   onPointerdown() {
+    return;
     this.water && this.water.buffer.onMousedown();
     this.faScreen && this.faScreen.onPointerdown();
     this.screenTitles && this.screenTitles.onPointerdown();
-    this.projectDetail && this.projectDetail.onPointerdown();
+    this.template === Template.ProjectDetail &&
+      this.projectDetail &&
+      this.projectDetail.onPointerdown();
     this.navigation && this.navigation.onPointerdown();
   }
   onPointerup() {
@@ -561,6 +572,7 @@ export default class World {
     this.screenTitles && this.screenTitles.onResize();
     this.isPreloaded && this.navigation.onResize();
     this.projectDetail && this.projectDetail.onResize();
+    this.about && this.about.onResize();
     // this.screen && this.screen.onResize();
   }
 
@@ -582,7 +594,7 @@ export default class World {
 
   update(delta: any) {
     this.cameraWrapper.update();
-    this.water && this.water.update(delta);
+    this.isPreloaded && this.water && this.water.update(delta);
     this.sky && this.sky.update();
     this.screenTitles && this.screenTitles.update();
     this.faScreen && this.faScreen.update();

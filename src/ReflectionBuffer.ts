@@ -54,6 +54,7 @@ export default class ReflectionBuffer {
     this.reflector.matrixWorld.copy(this.waterMesh.matrixWorld);
 
     this.world.navigation.group.visible = false;
+    this.world.about.group.visible = false;
     this.reflector.onBeforeRender(
       this.renderer,
       this.scene,
@@ -63,6 +64,7 @@ export default class ReflectionBuffer {
       null
     );
     this.world.navigation.group.visible = true;
+    this.world.about.group.visible = true;
     //   this.waterMesh.visible = true;
   }
 

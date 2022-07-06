@@ -391,6 +391,7 @@ export default class FaScreen {
         this.world.onChange({ template: Template.Projects });
       } else if (currentRoute === Template.Projects) {
         this.world.onChange({ template: Template.ProjectDetail });
+      } else {
       }
     }
   }
@@ -493,6 +494,8 @@ export default class FaScreen {
     this.world.camera.position.y = heightAboveWater + this.mesh.scale.y / 2;
     this.mesh.position.y = this.world.camera.position.y;
   }
+
+  onResizeAbout() {}
 
   onResizeCommon() {
     this.heightDepthRatio = Math.tan(degToRad(this.world.camera.fov / 2));
@@ -657,6 +660,7 @@ export default class FaScreen {
   }
 
   toAbout() {
+    this.onResize = this.onResizeAbout;
     GSAP.to(this.mesh.rotation, {
       x: 0.25 * Math.PI,
       y: 2.25 * Math.PI,
@@ -666,6 +670,12 @@ export default class FaScreen {
       x: 10,
       y: 10,
       z: 10,
+      duration: 1,
+    });
+    GSAP.to(this.mesh.position, {
+      x: 30,
+      y: 9,
+      z: 20,
       duration: 1,
     });
     this.update = this.updateAbout;
